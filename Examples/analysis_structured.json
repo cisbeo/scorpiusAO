@@ -1,0 +1,96 @@
+{
+  "tender": {
+    "id": "1962860f-dc60-401d-8520-083b55959c2d",
+    "analysis_id": "66c4119b-00d5-4840-8abe-f89d59f083a2",
+    "status": "completed",
+    "processing_time": 103,
+    "analyzed_at": "2025-09-30T22:14:55.633428Z"
+  },
+  "executive_summary": {
+    "summary": "Vallée Sud - Grand Paris lance un accord-cadre d'infogérance d'infrastructure et d'assistance utilisateur de premier niveau pour son système d'information couvrant 11 communes, 1200 agents et 40 sites. Le marché comprend des prestations forfaitaires (gouvernance, infrastructure, assistance niveau 1) et des prestations à bons de commande.",
+    "complexity": "élevée",
+    "deadlines": [
+      {
+        "type": "questions",
+        "date": "2025-04-11",
+        "description": "Date limite pour poser des questions (8 jours avant remise offre)"
+      },
+      {
+        "type": "remise_offre",
+        "date": "2025-04-19",
+        "description": "Date limite de remise des offres à 15h00"
+      }
+    ]
+  },
+  "requirements": {
+    "key_requirements": [
+      "Infogérance complète du SI : 147 switchs, 54 serveurs virtuels, 1259 comptes MS365, 595 postes",
+      "Assistance utilisateur niveau 1 avec adaptation selon 4 profils utilisateurs (VIP, collaborateurs, agents usage simplifié, public)",
+      "Gouvernance avec instances structurées (comités stratégique, pilotage, opérationnel)",
+      "Mise en place d'outils ITSM, supervision, portail téléphonique",
+      "Respect des méthodologies ITIL, PRINCE2, recommandations ANSSI",
+      "Phase de transition de 3 mois avec vérification d'aptitude obligatoire",
+      "Plan de réversibilité avec documentation complète et CMDB",
+      "Tableaux de bord mensuels et reporting détaillé",
+      "Accompagnement projets : migration Windows 11, renouvellement firewalls, amélioration SharePoint"
+    ],
+    "mandatory_documents": [
+      "Formulaire DC1 ou équivalent (Lettre de candidature)",
+      "Formulaire DC2 ou équivalent (Déclaration du candidat)",
+      "DUME accepté en remplacement des formulaires DC",
+      "Déclaration de chiffre d'affaires (3 derniers exercices)",
+      "Attestation d'assurance adaptée à l'objet du marché",
+      "Acte d'engagement signé",
+      "Décomposition du prix global forfaitaire (format Excel)",
+      "Bordereau des prix unitaires (format Excel)",
+      "Catalogue tarifaire du titulaire",
+      "Note méthodologique/mémoire technique détaillé"
+    ]
+  },
+  "risk_analysis": {
+    "risks": [
+      "Pénalités sur niveaux de service après phase VSR de 2 mois",
+      "Validation d'aptitude obligatoire après 3 mois de transition",
+      "Environnement technique complexe : 40 sites, réseau fibre propriétaire 54km",
+      "Coexistence avec infogérant actuel pendant transition",
+      "Exclusion possible en cas de conflit d'intérêts",
+      "Variantes libres non autorisées",
+      "Délai de validité des offres : 180 jours"
+    ],
+    "recommendations": [
+      "Constituer une équipe projet expérimentée en infogérance territoriale",
+      "Prévoir une phase de découverte approfondie de l'existant technique",
+      "Proposer des outils ITSM et supervision performants",
+      "Mettre l'accent sur la gouvernance et les processus ITIL",
+      "Prévoir des ressources dédiées pour la phase de transition critique",
+      "Valoriser l'expérience avec les collectivités territoriales similaires",
+      "Proposer des améliorations concrètes sur SharePoint et outils collaboratifs",
+      "Prévoir un plan de montée en compétences pour les équipes"
+    ]
+  },
+  "technical_data": {
+    "technical_requirements": {
+      "infrastructure": "Infrastructure complexe : 147 switchs Cisco/Dell/TP-Link, DNA Center, 54 VMs VMware, MS365 1259 comptes, firewalls Cisco Firepower, réseau fibre 54km, sauvegarde Veeam, 126 bornes WiFi Meraki",
+      "certifications": [
+        "Méthodologies ITIL",
+        "PRINCE2",
+        "PMBoK",
+        "Recommandations ANSSI",
+        "Certification Qualiville pour téléphonie"
+      ],
+      "service_level": "Niveaux de service stricts avec pénalités, disponibilité 24/7, adaptation selon profils utilisateurs, tableaux de bord mensuels"
+    },
+    "budget_info": {
+      "estimated_value": "Non communiqué - montant maximum fixé à l'acte d'engagement",
+      "duration": "2 ans reconductible 1 fois (4 ans maximum)",
+      "payment_terms": "Marché mixte : prestations forfaitaires + bons de commande"
+    },
+    "evaluation_method": "Mieux-disant",
+    "contact_info": {
+      "organization": "Vallée Sud - Grand Paris",
+      "contact_person": "Non précisé",
+      "email": "Via plateforme marches-securises.fr",
+      "phone": "+33 0186631162"
+    }
+  }
+}
