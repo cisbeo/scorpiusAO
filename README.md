@@ -8,8 +8,8 @@ Application IA destinée aux bid managers pour répondre aux appels d'offres pub
 
 ### Accès aux interfaces
 
-- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
-- **MinIO Console**: http://localhost:9001 (minioadmin/minioadmin)
+- **RabbitMQ Management**: <http://localhost:15672> (guest/guest)
+- **MinIO Console**: <http://localhost:9001> (minioadmin/minioadmin)
 
 ## 📁 Structure du projet
 
@@ -33,6 +33,7 @@ ScorpiusAO/
 ## 🛠️ Technologies
 
 ### Backend
+
 - **API**: FastAPI (Python 3.11+)
 - **AI**: Claude Sonnet 4.5, OpenAI Embeddings
 - **Database**: PostgreSQL 15 + pgvector
@@ -42,6 +43,7 @@ ScorpiusAO/
 - **OCR**: Tesseract
 
 ### Frontend (À venir)
+
 - **Framework**: Next.js 14+
 - **Language**: TypeScript
 - **UI**: React + TailwindCSS
@@ -49,6 +51,7 @@ ScorpiusAO/
 ## 📋 Prochaines étapes
 
 ### Backend
+
 1. ✅ Structure du projet créée
 2. ✅ Services d'infrastructure lancés
 3. ⏳ Créer les migrations de base de données
@@ -56,6 +59,7 @@ ScorpiusAO/
 5. ⏳ Implémenter les services (LLM, RAG, Parser)
 
 ### Frontend
+
 1. ⏳ Initialiser le projet Next.js
 2. ⏳ Créer les composants UI
 3. ⏳ Intégrer avec l'API backend
@@ -107,7 +111,7 @@ docker-compose down -v
 
 - [CLAUDE.md](CLAUDE.md) - Guide complet pour Claude Code
 - [Backend README](backend/README.md) - Documentation backend détaillée
-- API Docs: http://localhost:8000/docs (une fois l'API lancée)
+- API Docs: <http://localhost:8000/docs> (une fois l'API lancée)
 
 ## 🎯 Fonctionnalités principales
 
@@ -142,6 +146,7 @@ cp .env.example .env
 ```
 
 Variables essentielles :
+
 - `ANTHROPIC_API_KEY` - Clé API Claude
 - `OPENAI_API_KEY` - Clé API OpenAI (pour embeddings)
 - `DATABASE_URL` - Connexion PostgreSQL
@@ -206,6 +211,7 @@ def process_tender_document(self, document_id: str):
 ##### 3. Adapter les services
 
 **LLM Service**: Créer version sync
+
 ```python
 # app/services/llm_service.py
 
