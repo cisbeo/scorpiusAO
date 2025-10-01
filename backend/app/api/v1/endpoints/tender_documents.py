@@ -4,16 +4,17 @@ Tender document management endpoints.
 import os
 import uuid
 from typing import List
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Form
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from app.models.base import get_db
 from app.models.tender import Tender
 from app.models.tender_document import TenderDocument
-from app.schemas.tender_document import TenderDocumentResponse, TenderDocumentWithContent
-from app.tasks.tender_tasks import process_tender_document
+from app.schemas.tender_document import (TenderDocumentResponse,
+                                         TenderDocumentWithContent)
 from app.services.storage_service import storage_service
+from app.tasks.tender_tasks import process_tender_document
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
@@ -31,7 +32,7 @@ async def upload_document(
     Args:
         tender_id: UUID of the tender
         file: PDF file to upload
-        document_type: Type of document (CCTP, RC, AE, BPU, DUME, ANNEXE)
+        document_type: Type of document (CCTP, CCAP, RC, AE, BPU, DUME, ANNEXE)
     """
     # Verify tender exists
     stmt = select(Tender).where(Tender.id == tender_id)
@@ -46,7 +47,7 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
     # Validate document type
-    valid_types = ["CCTP", "RC", "AE", "BPU", "DUME", "ANNEXE"]
+    valid_types = ["CCTP", "CCAP", "RC", "AE", "BPU", "DUME", "ANNEXE"]
     if document_type.upper() not in valid_types:
         raise HTTPException(
             status_code=400,

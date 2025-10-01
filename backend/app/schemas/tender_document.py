@@ -2,14 +2,15 @@
 Pydantic schemas for Tender Documents.
 """
 from datetime import datetime
+from typing import Any, Dict, Optional
 from uuid import UUID
-from typing import Optional, Dict, Any
+
 from pydantic import BaseModel, Field
 
 
 class TenderDocumentBase(BaseModel):
     """Base schema for tender documents."""
-    document_type: str = Field(..., description="Type of document: CCTP, RC, AE, BPU, DUME, ANNEXE")
+    document_type: str = Field(..., description="Type of document: CCTP, CCAP, RC, AE, BPU, DUME, ANNEXE")
 
 
 class TenderDocumentUpload(TenderDocumentBase):

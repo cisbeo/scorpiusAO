@@ -7,6 +7,7 @@
 ### Contexte métier
 
 #### Défis des bid managers
+
 - **Volume documentaire**: Dossiers complexes (50-200 pages techniques)
 - **Contraintes temporelles**: Délais de réponse serrés (30-45 jours)
 - **Conformité stricte**: Critères DUME, DC4, certifications obligatoires
@@ -14,6 +15,7 @@
 - **Coordination**: Multi-intervenants (technique, juridique, finance)
 
 #### Plateformes cibles
+
 - **BOAMP** (Bulletin Officiel des Annonces des Marchés Publics)
 - **AWS PLACE** (Plateforme des Achats de l'État)
 - Plateformes régionales (Maximilien, Achat-Solution, etc.)
@@ -23,6 +25,7 @@
 ## 🎯 Stack technologique
 
 ### Backend (Python 3.11+)
+
 | Composant | Technologie | Version | Rôle |
 |-----------|-------------|---------|------|
 | **API Framework** | FastAPI | 0.109.0 | REST API async/await |
@@ -39,12 +42,14 @@
 | **Search Engine** | Elasticsearch | 8.11 | Full-text search (optionnel) |
 
 ### IA & ML
+
 | Service | Modèle | Usage | Coût estimé |
 |---------|--------|-------|-------------|
 | **LLM** | Claude Sonnet 4.5 | Analyse tenders, extraction critères | ~$0.30/1k tokens |
 | **Embeddings** | OpenAI text-embedding-3-small | Vecteurs RAG | ~$0.01/1M tokens |
 
 ### Services infrastructure (Docker Compose)
+
 ```yaml
 services:
   postgres:       # Port 5433
@@ -126,6 +131,7 @@ CREATE INDEX idx_tenders_reference ON tenders(reference_number);
 ```
 
 **États du workflow**:
+
 - `new`: Créé, documents non uploadés
 - `analyzing`: Analyse en cours (Celery)
 - `analyzed`: Analyse terminée avec succès
@@ -149,7 +155,7 @@ CREATE TABLE tender_documents (
     mime_type VARCHAR(100),
 
     -- Type de document (nomenclature marchés publics)
-    document_type VARCHAR(50),  -- CCTP, RC, AE, BPU, DUME, ANNEXE
+    document_type VARCHAR(50),  -- CCTP, CCAP, RC, AE, BPU, DUME, ANNEXE
 
     -- Extraction
     extraction_status VARCHAR(50) DEFAULT 'pending',
@@ -170,7 +176,9 @@ CREATE INDEX idx_tender_documents_type ON tender_documents(document_type);
 ```
 
 **Types de documents**:
+
 - **CCTP**: Cahier des Clauses Techniques Particulières (spécifications techniques)
+- **CCAP**: Cahier des Clauses Administratives Particulières (clauses contractuelles, pénalités, modalités paiement)
 - **RC**: Règlement de Consultation (procédure, critères évaluation)
 - **AE**: Acte d'Engagement (formulaire engagement prix)
 - **BPU**: Bordereau des Prix Unitaires (décomposition prix)
@@ -178,6 +186,7 @@ CREATE INDEX idx_tender_documents_type ON tender_documents(document_type);
 - **ANNEXE**: Documents complémentaires
 
 **États extraction**:
+
 - `pending`: En attente traitement
 - `processing`: Extraction en cours
 - `completed`: Texte extrait avec succès
@@ -227,6 +236,7 @@ CREATE UNIQUE INDEX idx_tender_analyses_tender ON tender_analyses(tender_id);
 ```
 
 **Format `structured_data`**:
+
 ```json
 {
   "technical_requirements": {
@@ -276,6 +286,7 @@ CREATE INDEX idx_tender_criteria_tender ON tender_criteria(tender_id);
 ```
 
 **Format `meta_data`**:
+
 ```json
 {
   "evaluation_method": "Formule de notation: Note = (Prix le plus bas / Prix offre) × 60",
@@ -295,6 +306,7 @@ CREATE INDEX idx_tender_criteria_tender ON tender_criteria(tender_id);
 ```
 
 **Types de critères standards**:
+
 - `prix`: Prix, coût global
 - `technique`: Valeur technique, qualité prestation
 - `delai`: Délais exécution, planning
@@ -331,6 +343,7 @@ CREATE INDEX idx_criterion_suggestions_source ON criterion_suggestions(source_ty
 ```
 
 **Sources de contenu**:
+
 - `past_tender`: Réponse d'un tender précédent gagné
 - `certification`: Extrait d'une certification (ISO 27001, HDS, etc.)
 - `case_study`: Cas d'usage, référence client
@@ -359,6 +372,7 @@ CREATE INDEX idx_similar_tenders_similar ON similar_tenders(similar_tender_id);
 ```
 
 **Utilisation**:
+
 - Recommander réponses passées pertinentes
 - Estimer probabilité de gagner (si `was_won` renseigné)
 - Benchmarking prix/délais
@@ -403,6 +417,7 @@ CREATE INDEX idx_proposals_status ON proposals(status);
 ```
 
 **Sections standards** (adaptables):
+
 - `company_presentation`: Présentation entreprise
 - `methodology`: Méthodologie projet
 - `team`: Équipe dédiée (CV, organigramme)
@@ -456,11 +471,13 @@ CREATE INDEX idx_embeddings_type ON document_embeddings(document_type);
 ```
 
 **Paramètres index IVFFlat**:
+
 - `lists = 100`: Nombre de clusters (tunable selon volume)
 - Trade-off: Plus de lists = recherche plus rapide, moins précise
 - Recommandé: `lists = sqrt(nb_rows)` pour <1M vecteurs
 
 **Requête similarité cosine**:
+
 ```sql
 SELECT
     id,
@@ -478,7 +495,9 @@ LIMIT 5;
 ### Contraintes et relations
 
 #### Foreign Keys avec CASCADE
+
 Toutes les relations utilisent `ON DELETE CASCADE` pour nettoyage automatique:
+
 ```sql
 tender_documents.tender_id → tenders.id (CASCADE)
 tender_analyses.tender_id → tenders.id (CASCADE)
@@ -491,6 +510,7 @@ proposals.tender_id → tenders.id (CASCADE)
 **Exemple**: Supprimer un tender → supprime automatiquement tous ses documents, analyses, critères, proposals associés.
 
 #### Indexes de performance
+
 - **Status columns**: Filtres fréquents dans listes (WHERE status = 'analyzed')
 - **Foreign Keys**: Jointures rapides
 - **Dates**: Tri chronologique (ORDER BY created_at DESC)
@@ -541,9 +561,11 @@ proposals.tender_id → tenders.id (CASCADE)
 ### Endpoints détaillés
 
 #### **POST /api/v1/tenders/**
+
 Créer un nouveau tender
 
 **Request**:
+
 ```json
 {
   "title": "Infogérance infrastructure IT - Vallée Sud GP",
@@ -556,6 +578,7 @@ Créer un nouveau tender
 ```
 
 **Response (201)**:
+
 ```json
 {
   "id": "1962860f-dc60-401d-8520-083b55959c2d",
@@ -573,15 +596,18 @@ Créer un nouveau tender
 ---
 
 #### **POST /api/v1/tenders/{id}/documents/upload**
+
 Upload un document PDF
 
 **Request** (multipart/form-data):
+
 ```
 file: CCTP.pdf (binary)
 document_type: "CCTP"
 ```
 
 **Response (201)**:
+
 ```json
 {
   "id": "abc123...",
@@ -595,23 +621,28 @@ document_type: "CCTP"
 ```
 
 **Validation**:
+
 - Type MIME: `application/pdf` uniquement
 - Taille max: 50 MB
-- Types autorisés: `CCTP, RC, AE, BPU, DUME, ANNEXE`
+- Types autorisés: `CCTP, CCAP, RC, AE, BPU, DUME, ANNEXE`
 
 **Déclenchement automatique**:
+
 - Tâche Celery `process_tender_document(document_id)` lancée en arrière-plan
 
 ---
 
 #### **POST /api/v1/tenders/{id}/analyze**
+
 Déclencher l'analyse complète du tender
 
 **Pré-requis**:
+
 - Au moins 1 document uploadé
 - Tous les documents avec `extraction_status = completed`
 
 **Response (202)**:
+
 ```json
 {
   "message": "Analysis started",
@@ -622,6 +653,7 @@ Déclencher l'analyse complète du tender
 ```
 
 **Actions déclenchées**:
+
 - Tender `status` → `analyzing`
 - Création `tender_analyses` (status: `processing`)
 - Lancement tâche Celery `process_tender_documents(tender_id)`
@@ -629,9 +661,11 @@ Déclencher l'analyse complète du tender
 ---
 
 #### **GET /api/v1/tenders/{id}/analysis/status**
+
 Suivi de la progression de l'analyse
 
 **Response (200)**:
+
 ```json
 {
   "tender_id": "1962860f...",
@@ -644,6 +678,7 @@ Suivi de la progression de l'analyse
 ```
 
 **États possibles**:
+
 - `pending`: En attente (pas encore démarré)
 - `processing`: En cours
 - `completed`: Terminé avec succès
@@ -652,9 +687,11 @@ Suivi de la progression de l'analyse
 ---
 
 #### **GET /api/v1/tenders/{id}/analysis**
+
 Récupérer les résultats complets de l'analyse
 
 **Response (200)**:
+
 ```json
 {
   "id": "xyz789...",
@@ -713,6 +750,7 @@ Récupérer les résultats complets de l'analyse
 #### Schémas principaux
 
 **TenderCreate** (input validation):
+
 ```python
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -727,6 +765,7 @@ class TenderCreate(BaseModel):
 ```
 
 **TenderResponse** (output serialization):
+
 ```python
 class TenderResponse(BaseModel):
     id: UUID
@@ -744,6 +783,7 @@ class TenderResponse(BaseModel):
 ```
 
 **Avantages Pydantic**:
+
 - Validation automatique types + contraintes
 - Messages d'erreur clairs (422 Unprocessable Entity)
 - Serialization JSON automatique (datetime → ISO8601)
@@ -758,11 +798,13 @@ class TenderResponse(BaseModel):
 **Fichier**: [app/services/storage_service.py](backend/app/services/storage_service.py:1)
 
 #### Responsabilités
+
 - Upload/download fichiers vers MinIO (S3-compatible)
 - Génération presigned URLs (accès temporaire)
 - Gestion lifecycle fichiers
 
 #### API publique
+
 ```python
 class StorageService:
     def __init__(self):
@@ -800,6 +842,7 @@ class StorageService:
 ```
 
 #### Organisation fichiers
+
 ```
 scorpius-documents/  (bucket)
 └── tenders/
@@ -811,6 +854,7 @@ scorpius-documents/  (bucket)
 ```
 
 #### Gestion erreurs
+
 ```python
 try:
     storage_service.upload_file(content, path, "application/pdf")
@@ -829,6 +873,7 @@ except S3Error as e:
 **Fichier**: [app/services/parser_service.py](backend/app/services/parser_service.py:1)
 
 #### Responsabilités
+
 - Extraction texte depuis PDFs (natifs ou scannés)
 - Parsing métadonnées PDF
 - Extraction informations structurées (dates, emails, téléphones, références)
@@ -836,16 +881,19 @@ except S3Error as e:
 #### Méthodes d'extraction
 
 **1. PyPDF2 (texte natif)**
+
 ```python
 def _extract_text_pypdf2(self, pdf_file: io.BytesIO) -> str:
     reader = PyPDF2.PdfReader(pdf_file)
     text_parts = [page.extract_text() for page in reader.pages]
     return "\n\n".join(text_parts)
 ```
+
 - **Avantages**: Rapide, pas de dépendances externes
 - **Limites**: Faible avec PDFs scannés ou mal formés
 
 **2. pdfplumber (tables)**
+
 ```python
 def _extract_text_pdfplumber(self, pdf_file: io.BytesIO) -> str:
     with pdfplumber.open(pdf_file) as pdf:
@@ -853,20 +901,24 @@ def _extract_text_pdfplumber(self, pdf_file: io.BytesIO) -> str:
             text = page.extract_text()
             tables = page.extract_tables()  # Extraction tables structurées
 ```
+
 - **Avantages**: Meilleure détection tables, colonnes
 - **Utilisation**: BPU (prix), critères avec pondération
 
 **3. Tesseract OCR (scannés)**
+
 ```python
 def _extract_with_ocr(self, pdf_file: io.BytesIO) -> str:
     # Conversion PDF → images (pdf2image)
     # OCR via Tesseract
     # Reconstruction texte
 ```
+
 - **Avantages**: Fonctionne sur PDFs scannés
 - **Limites**: Lent (5-10s par page), qualité variable
 
 #### Stratégie d'extraction
+
 ```python
 async def extract_from_pdf(
     self,
@@ -898,6 +950,7 @@ async def extract_from_pdf(
 #### Extraction données structurées
 
 **Références marchés publics**:
+
 ```python
 patterns = [
     r'\b\d{4}[-/]\d{2,4}[-/]\w+\b',  # 2024/123/AO
@@ -907,6 +960,7 @@ patterns = [
 ```
 
 **Dates limites**:
+
 ```python
 date_pattern = r'\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b'
 keywords = [
@@ -917,6 +971,7 @@ keywords = [
 ```
 
 **Emails et téléphones**:
+
 ```python
 email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 phone_pattern = r'\b(?:0|\+33)[1-9](?:[\s.-]?\d{2}){4}\b'  # Format FR
@@ -933,6 +988,7 @@ phone_pattern = r'\b(?:0|\+33)[1-9](?:[\s.-]?\d{2}){4}\b'  # Format FR
 #### Architecture hybride async/sync
 
 **Pourquoi deux clients ?**
+
 - FastAPI (async/await) ≠ Celery (threads synchrones)
 - Solution: Deux clients partageant le même cache Redis
 
@@ -952,6 +1008,7 @@ class LLMService:
 #### Cache Redis intégré
 
 **Stratégie**:
+
 ```python
 async def analyze_tender(self, content: str) -> dict:
     # 1. Générer clé cache (hash SHA256 tronqué)
@@ -973,6 +1030,7 @@ async def analyze_tender(self, content: str) -> dict:
 ```
 
 **Bénéfices**:
+
 - **Économie coûts**: 50%+ sur requêtes répétées (dev, tests)
 - **Latence**: < 100ms sur cache hit (vs. 30-120s API call)
 - **Rate limiting**: Évite hitting limites Anthropic
@@ -982,6 +1040,7 @@ async def analyze_tender(self, content: str) -> dict:
 **Fichier**: [app/core/prompts.py](backend/app/core/prompts.py:1)
 
 **1. TENDER_ANALYSIS_PROMPT**
+
 ```python
 TENDER_ANALYSIS_PROMPT = """
 Tu es un expert en analyse d'appels d'offres publics français.
@@ -1011,6 +1070,7 @@ Document :
 ```
 
 **2. CRITERIA_EXTRACTION_PROMPT**
+
 ```python
 CRITERIA_EXTRACTION_PROMPT = """
 Extrais TOUS les critères d'évaluation mentionnés dans le règlement de consultation.
@@ -1035,6 +1095,7 @@ Document :
 ```
 
 **Optimisations prompts**:
+
 - Format JSON explicite → parsing fiable
 - Exemples inline → meilleure compréhension
 - Vocabulaire métier (CCTP, DUME, BPU) → contexte français
@@ -1043,6 +1104,7 @@ Document :
 #### Parsing robuste
 
 **Gestion formats multiples**:
+
 ```python
 def _parse_analysis_response(self, response: str) -> dict:
     try:
@@ -1063,6 +1125,7 @@ def _parse_analysis_response(self, response: str) -> dict:
 ```
 
 **Avantages**:
+
 - Tolère variations format Claude (markdown, code blocks)
 - Fallback graceful (pas de crash sur parsing error)
 - Logging automatique des erreurs
@@ -1070,6 +1133,7 @@ def _parse_analysis_response(self, response: str) -> dict:
 #### Métriques observées
 
 **Test VSGP-AO** (30/09/2025):
+
 ```
 Input: 741,703 caractères (3 PDFs: CCTP + RC + CCAP)
 Tokens: 32,128 input + 1,306 output
@@ -1079,6 +1143,7 @@ Coût: ~$9.60 (input) + $6.53 (output) = $16.13
 ```
 
 **Performance par opération**:
+
 | Opération | Temps (P50) | Temps (P95) | Coût estimé |
 |-----------|-------------|-------------|-------------|
 | `analyze_tender` | 60s | 120s | $10-20 |
@@ -1209,16 +1274,19 @@ class RAGService:
 #### Chunking strategy
 
 **Paramètres actuels**:
+
 - `chunk_size`: 1024 tokens (~750 mots anglais, ~850 mots français)
 - `chunk_overlap`: 200 tokens (~20% overlap)
 
 **Rationale**:
+
 - **1024 tokens**: Balance contexte vs. granularité
   - Trop petit (256): Perd contexte sémantique
   - Trop grand (2048): Dilue signal de similarité
 - **Overlap 200**: Évite couper phrases/paragraphes importants
 
 **À optimiser**:
+
 - Tester 512, 1024, 2048 tokens
 - Mesurer recall@5 et recall@10
 - Adapter selon type document (CCTP long vs. RC court)
@@ -1226,6 +1294,7 @@ class RAGService:
 #### Recherche vectorielle pgvector
 
 **Index IVFFlat**:
+
 ```sql
 CREATE INDEX idx_embeddings_cosine
 ON document_embeddings
@@ -1234,6 +1303,7 @@ WITH (lists = 100);
 ```
 
 **Trade-offs**:
+
 | Lists | Vitesse | Précision | Recommandé pour |
 |-------|---------|-----------|-----------------|
 | 10    | Lent    | Haute     | <1k vecteurs |
@@ -1243,6 +1313,7 @@ WITH (lists = 100);
 **Formule recommandée**: `lists = sqrt(nb_rows)`
 
 **Métriques recherche**:
+
 ```python
 # Benchmark à implémenter
 def benchmark_search(query: str, ground_truth: List[str]):
@@ -1272,12 +1343,14 @@ RabbitMQ (Broker) ←→ Celery Workers ←→ Redis (Results)
 ```
 
 **Avantages Celery**:
+
 - **Découplage**: API répond immédiatement (202 Accepted)
 - **Résilience**: Retry automatique sur erreur
 - **Scalabilité**: Ajout workers horizontal
 - **Monitoring**: Dashboard Flower temps réel
 
 **Configuration**:
+
 ```python
 # app/core/celery_app.py
 celery_app = Celery(
@@ -1307,12 +1380,14 @@ celery_app.conf.update(
 **Rôle**: Extraire texte d'un seul document PDF
 
 **Signature**:
+
 ```python
 @celery_app.task(bind=True, max_retries=3)
 def process_tender_document(self, document_id: str) -> dict:
 ```
 
 **Pipeline** (6 étapes):
+
 ```
 1. Charger TenderDocument depuis DB
    └→ Mettre extraction_status = "processing"
@@ -1334,6 +1409,7 @@ def process_tender_document(self, document_id: str) -> dict:
 ```
 
 **Gestion erreurs**:
+
 ```python
 except Exception as exc:
     # Mettre document en failed
@@ -1346,6 +1422,7 @@ except Exception as exc:
 ```
 
 **Métriques**:
+
 - Durée moyenne: 2-5s par document (10-50 pages)
 - Taux succès: >95% (sans OCR), >80% (avec OCR)
 
@@ -1358,6 +1435,7 @@ except Exception as exc:
 **Rôle**: Pipeline complet d'analyse (6 étapes orchestrées)
 
 **Signature**:
+
 ```python
 @celery_app.task(bind=True, max_retries=3)
 def process_tender_documents(self, tender_id: str) -> dict:
@@ -1562,6 +1640,7 @@ return {
 ### Gestion erreurs globale
 
 **Retry exponentiel**:
+
 ```python
 except Exception as exc:
     # Mettre analyse en failed
@@ -1577,6 +1656,7 @@ except Exception as exc:
 ```
 
 **Logs structurés**:
+
 ```python
 print(f"🚀 Starting analysis of tender {tender_id}")
 print(f"📄 Step 1/6: Extracting content from {len(documents)} documents")
@@ -1999,6 +2079,7 @@ RATE_LIMIT_PER_MINUTE=60
 #### 1. Authentification JWT
 
 **Structure préparée** ([app/core/security.py](backend/app/core/security.py:1)):
+
 ```python
 from jose import jwt
 from passlib.context import CryptContext
@@ -2023,6 +2104,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 ```
 
 **Endpoints à ajouter**:
+
 ```python
 @router.post("/auth/login")
 async def login(username: str, password: str):
@@ -2041,6 +2123,7 @@ async def refresh_token(refresh_token: str):
 #### 2. RBAC (Role-Based Access Control)
 
 **Modèle User à créer**:
+
 ```python
 class User(Base):
     __tablename__ = "users"
@@ -2059,6 +2142,7 @@ class User(Base):
 ```
 
 **Rôles et permissions**:
+
 ```python
 PERMISSIONS = {
     "admin": ["*"],  # Tout
@@ -2097,6 +2181,7 @@ async def delete_tender(id: UUID, current_user: User):
 #### 3. Rate Limiting
 
 **Middleware Redis sliding window**:
+
 ```python
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -2127,6 +2212,7 @@ async def rate_limit_middleware(request: Request, call_next):
 #### 4. Validation sécurisée uploads
 
 **Checks multiples**:
+
 ```python
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 ALLOWED_MIME_TYPES = ["application/pdf"]
@@ -2170,6 +2256,7 @@ async def validate_upload(file: UploadFile) -> None:
 #### 1. Cache Redis multi-niveaux
 
 **Stratégie actuelle**:
+
 ```python
 # LLM Service: Analyses Claude API
 cache_key = f"tender_analysis:{content_hash}"
@@ -2182,6 +2269,7 @@ ttl = 3600  # 1 heure
 ```
 
 **Extensions futures**:
+
 ```python
 # API responses (GET endpoints)
 @lru_cache(maxsize=128)
@@ -2198,6 +2286,7 @@ ttl = 86400  # 24 heures
 #### 2. Async I/O partout
 
 **FastAPI async/await**:
+
 ```python
 # Requêtes DB concurrentes
 tender, documents = await asyncio.gather(
@@ -2213,6 +2302,7 @@ await asyncio.gather(*[
 ```
 
 **AsyncPG pour PostgreSQL**:
+
 - Connection pooling (20 connexions)
 - Prepared statements
 - Binary protocol (plus rapide que psycopg2)
@@ -2222,6 +2312,7 @@ await asyncio.gather(*[
 #### 3. Celery background processing
 
 **Déchargement tâches longues**:
+
 ```python
 # Sans Celery (blocking)
 @router.post("/analyze")
@@ -2237,6 +2328,7 @@ async def analyze(tender_id: UUID):
 ```
 
 **Scalabilité horizontale**:
+
 ```bash
 # Ajouter workers selon charge
 celery -A app.tasks.celery_app worker --concurrency=4 --hostname=worker1@%h
@@ -2248,6 +2340,7 @@ celery -A app.tasks.celery_app worker --concurrency=4 --hostname=worker2@%h
 #### 4. Database indexes
 
 **Impact mesurable**:
+
 ```sql
 -- Avant index sur status
 EXPLAIN ANALYZE SELECT * FROM tenders WHERE status = 'analyzed';
@@ -2261,6 +2354,7 @@ CREATE INDEX idx_tenders_status ON tenders(status);
 ```
 
 **Indexes critiques**:
+
 - FK (jointures): `tender_id`, `criterion_id`, etc.
 - Status (filtres): `tenders.status`, `tender_analyses.analysis_status`
 - Dates (tri): `created_at`, `deadline`
@@ -2271,6 +2365,7 @@ CREATE INDEX idx_tenders_status ON tenders(status);
 #### 5. Chunking intelligent
 
 **Trade-offs**:
+
 | Chunk Size | Contexte | Précision | Nb embeddings (100k mots) |
 |------------|----------|-----------|---------------------------|
 | 256 tokens | Faible   | Haute     | ~400 |
@@ -2280,6 +2375,7 @@ CREATE INDEX idx_tenders_status ON tenders(status);
 **Choix actuel**: 1024 tokens (balance contexte/précision)
 
 **Optimisation future**: Adaptive chunking
+
 ```python
 def adaptive_chunk(text: str, document_type: str):
     if document_type == "CCTP":
@@ -2295,12 +2391,14 @@ def adaptive_chunk(text: str, document_type: str):
 ### Métriques observées
 
 #### Extraction PDF
+
 | Méthode | Temps (P50) | Temps (P95) | Taux succès |
 |---------|-------------|-------------|-------------|
 | PyPDF2  | 2s          | 5s          | 95%         |
 | OCR     | 8s          | 15s         | 80%         |
 
 **Facteurs**:
+
 - Taille: ~0.5s par page (texte natif), ~2s par page (OCR)
 - Qualité: PDFs bien formés vs. scannés
 - Complexité: Texte simple vs. tables/graphiques
@@ -2308,12 +2406,14 @@ def adaptive_chunk(text: str, document_type: str):
 ---
 
 #### Analyse Claude API
+
 | Opération | Temps (P50) | Temps (P95) | Coût (10k chars) |
 |-----------|-------------|-------------|------------------|
 | `analyze_tender` | 60s | 120s | $1-2 |
 | `extract_criteria` | 20s | 40s | $0.3-0.5 |
 
 **Facteurs**:
+
 - Taille input: Linéaire jusqu'à 100k tokens
 - Complexité: Documents structurés vs. texte dense
 - Cache: Hit = < 1s (économie 98%)
@@ -2321,6 +2421,7 @@ def adaptive_chunk(text: str, document_type: str):
 ---
 
 #### Throughput global
+
 | Configuration | Tenders/heure | Coût/tender |
 |---------------|---------------|-------------|
 | 1 worker      | 5-10          | $15-20      |
@@ -2433,18 +2534,20 @@ docker-compose exec api alembic upgrade head
 ### URLs et interfaces
 
 #### Développement
-- **API Documentation**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
-- **Flower (Celery)**: http://localhost:5555
-- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
-- **MinIO Console**: http://localhost:9001 (minioadmin/minioadmin)
+
+- **API Documentation**: <http://localhost:8000/docs>
+- **ReDoc**: <http://localhost:8000/redoc>
+- **Health Check**: <http://localhost:8000/health>
+- **Flower (Celery)**: <http://localhost:5555>
+- **RabbitMQ Management**: <http://localhost:15672> (guest/guest)
+- **MinIO Console**: <http://localhost:9001> (minioadmin/minioadmin)
 
 #### Production
-- **API**: https://api.scorpius.ai
-- **Frontend**: https://app.scorpius.ai
-- **Monitoring**: https://grafana.scorpius.ai
-- **Status Page**: https://status.scorpius.ai
+
+- **API**: <https://api.scorpius.ai>
+- **Frontend**: <https://app.scorpius.ai>
+- **Monitoring**: <https://grafana.scorpius.ai>
+- **Status Page**: <https://status.scorpius.ai>
 
 ---
 
@@ -2453,6 +2556,7 @@ docker-compose exec api alembic upgrade head
 ### ✅ Complètement fonctionnel (70%)
 
 #### Infrastructure & DevOps
+
 - [x] PostgreSQL 15 + pgvector extension
 - [x] Redis cache & sessions
 - [x] RabbitMQ message broker
@@ -2462,12 +2566,14 @@ docker-compose exec api alembic upgrade head
 - [x] Health check endpoints
 
 #### Base de données
+
 - [x] 9 tables avec contraintes FK
 - [x] Indexes optimisés
 - [x] Relations CASCADE
 - [x] Vector extension (pgvector)
 
 #### API REST
+
 - [x] 12 endpoints FastAPI
 - [x] Validation Pydantic
 - [x] Documentation OpenAPI auto
@@ -2475,6 +2581,7 @@ docker-compose exec api alembic upgrade head
 - [x] Async/await everywhere
 
 #### Services métier
+
 - [x] **StorageService** (MinIO upload/download)
 - [x] **ParserService** (PDF extraction + OCR)
 - [x] **LLMService** (Claude API complet)
@@ -2485,6 +2592,7 @@ docker-compose exec api alembic upgrade head
   - [x] Test validé VSGP-AO
 
 #### Pipeline Celery
+
 - [x] Worker configuration
 - [x] Task: `process_tender_document` ✅
 - [x] Task: `process_tender_documents` ✅
@@ -2500,6 +2608,7 @@ docker-compose exec api alembic upgrade head
 ### ⚠️ Partiellement implémenté (20%)
 
 #### RAG Service
+
 - [x] Structure classes
 - [x] Méthodes chunking
 - [x] Requêtes pgvector prêtes
@@ -2508,11 +2617,13 @@ docker-compose exec api alembic upgrade head
 - [ ] Reranking implémenté
 
 #### Pipeline Celery
+
 - [ ] Étape 2: Création embeddings
 - [ ] Étape 5: Recherche similarité
 - [ ] Étape 6: Génération suggestions
 
 #### Sécurité
+
 - [x] Structure JWT prête
 - [ ] Endpoints auth (/login, /refresh)
 - [ ] Modèle User + RBAC
@@ -2520,6 +2631,7 @@ docker-compose exec api alembic upgrade head
 - [ ] Validation uploads avancée
 
 #### Monitoring
+
 - [x] Logs console structurés
 - [x] Flower dashboard Celery
 - [ ] Sentry intégration
@@ -2531,6 +2643,7 @@ docker-compose exec api alembic upgrade head
 ### ❌ Non commencé (10%)
 
 #### Frontend
+
 - [ ] Application Next.js
 - [ ] Dashboard tenders
 - [ ] Interface upload
@@ -2538,17 +2651,20 @@ docker-compose exec api alembic upgrade head
 - [ ] Éditeur réponses
 
 #### Intégrations externes
+
 - [ ] Scraper BOAMP
 - [ ] AWS PLACE connector
 - [ ] Notifications email
 
 #### Features avancées
+
 - [ ] Génération mémo technique
 - [ ] Export DUME/DC4
 - [ ] Scoring simulation
 - [ ] Éditeur collaboratif
 
 #### Tests
+
 - [ ] Tests unitaires services
 - [ ] Tests intégration API
 - [ ] Tests E2E Playwright
@@ -2559,40 +2675,47 @@ docker-compose exec api alembic upgrade head
 ## 💡 Points forts de l'architecture
 
 ### 1. Scalabilité horizontale
+
 - **API stateless**: Pas de session locale, scale avec load balancer
 - **Workers Celery**: Ajout dynamique selon charge
 - **Cache Redis**: Partage état entre instances
 - **Database connection pooling**: 20 connexions max par instance
 
 ### 2. Résilience
+
 - **Retry automatique**: Celery retry exponentiel (3 tentatives)
 - **Health checks**: Liveness/readiness probes K8s
 - **Graceful degradation**: Fallback si service externe down
 - **Circuit breaker**: Évite cascading failures
 
 ### 3. Type safety
+
 - **Pydantic partout**: Validation input/output automatique
 - **SQLAlchemy ORM**: Type hints sur models
 - **MyPy compatible**: Static type checking
 
 ### 4. Performance
+
 - **Async I/O**: FastAPI + AsyncPG + Redis async
 - **Cache multi-niveaux**: Redis L1 (API) + Redis L2 (embeddings)
 - **Database indexes**: Optimisation requêtes fréquentes
 - **Connection pooling**: Réutilisation connexions DB
 
 ### 5. Observabilité
+
 - **Logs structurés**: JSON logs avec contexte (request_id, user_id)
 - **Metrics**: Prometheus counters, histograms
 - **Tracing**: Sentry pour erreurs avec stack traces
 - **Monitoring**: Flower pour Celery, Grafana pour métriques
 
 ### 6. Modularité
+
 - **Services découplés**: Storage, Parser, LLM, RAG indépendants
 - **Dependency injection**: FastAPI Depends() pattern
 - **Interface-based**: Facile de swapper implémentations (MinIO → S3)
 
 ### 7. Production-ready
+
 - **Docker Compose**: Déploiement reproductible
 - **Migrations Alembic**: Gestion schéma DB versionné
 - **Environment variables**: 12-factor app principles
@@ -2600,18 +2723,21 @@ docker-compose exec api alembic upgrade head
 - **Health endpoints**: /health pour load balancers
 
 ### 8. IA avancée
+
 - **LLM cache**: Économie 50%+ coûts API
 - **Prompts optimisés**: JSON structuré, vocabulaire métier
 - **Hybrid sync/async**: FastAPI + Celery compatible
 - **RAG architecture**: Recherche vectorielle pgvector
 
 ### 9. Coût-efficace
+
 - **Cache hits**: -98% latence, -50%+ coûts
 - **Chunking optimal**: Balance précision/coût embeddings
 - **Open-source stack**: PostgreSQL, Redis, RabbitMQ gratuits
 - **Serverless-ready**: Compatible Lambda/Cloud Run
 
 ### 10. Testé en production
+
 - **End-to-end validé**: VSGP-AO (741k chars, 103s)
 - **Extraction robuste**: PyPDF2 + OCR fallback
 - **Analyse complète**: Claude API extraction critères
@@ -2622,6 +2748,7 @@ docker-compose exec api alembic upgrade head
 ## 📚 Ressources et documentation
 
 ### Documentation projet
+
 - **README.md**: Vue d'ensemble et quick start
 - **CLAUDE.md**: Instructions pour Claude Code
 - **IMPLEMENTATION_SUMMARY.md**: Résumé détaillé implémentation
@@ -2629,26 +2756,30 @@ docker-compose exec api alembic upgrade head
 - **ROADMAP.md**: Prochaines étapes et planning
 
 ### Exemples
+
 - **Examples/analysis_report.md**: Rapport analyse VSGP-AO formaté
 - **Examples/analysis_structured.json**: Export JSON analyse
 - **Examples/**: Autres exemples à ajouter
 
 ### API Documentation
-- **OpenAPI/Swagger**: http://localhost:8000/docs (interactive)
-- **ReDoc**: http://localhost:8000/redoc (documentation statique)
+
+- **OpenAPI/Swagger**: <http://localhost:8000/docs> (interactive)
+- **ReDoc**: <http://localhost:8000/redoc> (documentation statique)
 
 ### Services externes
-- **Anthropic Claude**: https://docs.anthropic.com/claude/reference
-- **OpenAI Embeddings**: https://platform.openai.com/docs/guides/embeddings
-- **pgvector**: https://github.com/pgvector/pgvector
-- **FastAPI**: https://fastapi.tiangolo.com
-- **Celery**: https://docs.celeryproject.org
+
+- **Anthropic Claude**: <https://docs.anthropic.com/claude/reference>
+- **OpenAI Embeddings**: <https://platform.openai.com/docs/guides/embeddings>
+- **pgvector**: <https://github.com/pgvector/pgvector>
+- **FastAPI**: <https://fastapi.tiangolo.com>
+- **Celery**: <https://docs.celeryproject.org>
 
 ---
 
 ## 📈 Statistiques projet
 
 ### Métriques code
+
 - **Fichiers Python**: 42
 - **Lignes de code**: ~3500 (sans tests)
 - **Tables DB**: 9
@@ -2658,16 +2789,19 @@ docker-compose exec api alembic upgrade head
 - **Services métier**: 4 (Storage, Parser, LLM, RAG)
 
 ### Dépendances
+
 - **Packages Python**: 40+ (requirements.txt)
 - **Services Docker**: 8 (postgres, redis, rabbitmq, minio, etc.)
 
 ### Couverture fonctionnelle
+
 - **Backend**: 70% complet
 - **Frontend**: 0% (à développer)
 - **Tests**: 10% (à compléter)
 - **Documentation**: 90%
 
 ### Performance benchmark
+
 - **Extraction PDF**: 2-5s par document
 - **Analyse Claude API**: 60-120s par tender
 - **Cache hit**: < 1s

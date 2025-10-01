@@ -3,39 +3,471 @@ RAG Service for semantic search using pgvector.
 """
 from typing import List, Dict, Any
 from uuid import UUID
-import openai
+import asyncio
+import hashlib
+import json
+import logging
+from openai import AsyncOpenAI, OpenAI, OpenAIError, RateLimitError, APIError
+import redis.asyncio as redis
+import redis as redis_sync
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log
+)
 
 from app.core.config import settings
 from app.models.document import DocumentEmbedding
+
+logger = logging.getLogger(__name__)
 
 
 class RAGService:
     """Service for Retrieval Augmented Generation."""
 
     def __init__(self):
-        if settings.openai_api_key:
-            openai.api_key = settings.openai_api_key
+        if not settings.openai_api_key:
+            raise ValueError(
+                "OPENAI_API_KEY is not configured. Please set it in .env file or environment variables."
+            )
+
+        # Async client for API endpoints
+        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
+        # Sync client for Celery tasks
+        self.sync_client = OpenAI(api_key=settings.openai_api_key)
+
         self.embedding_model = settings.embedding_model
         self.chunk_size = settings.chunk_size
         self.chunk_overlap = settings.chunk_overlap
 
-    async def create_embedding(self, text: str) -> List[float]:
+        # Redis clients for caching (lazy initialization)
+        self.redis_client: redis.Redis | None = None
+        self.redis_sync_client: redis_sync.Redis | None = None
+
+        # Cache TTL (30 days)
+        self.cache_ttl = 30 * 24 * 3600
+
+        logger.info(f"RAGService initialized with model: {self.embedding_model}")
+
+    async def _get_redis(self) -> redis.Redis:
+        """Get or create async Redis client."""
+        if self.redis_client is None:
+            self.redis_client = await redis.from_url(settings.redis_url)
+        return self.redis_client
+
+    def _get_redis_sync(self) -> redis_sync.Redis:
+        """Get or create sync Redis client."""
+        if self.redis_sync_client is None:
+            self.redis_sync_client = redis_sync.from_url(settings.redis_url)
+        return self.redis_sync_client
+
+    def _cache_key(self, text: str) -> str:
         """
-        Create embedding vector for text.
+        Generate cache key from text using SHA256 hash.
 
         Args:
-            text: Text to embed
+            text: Input text
 
         Returns:
-            Embedding vector
+            Redis cache key
         """
-        response = await openai.embeddings.create(
-            model=self.embedding_model,
-            input=text
-        )
-        return response.data[0].embedding
+        text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
+        return f"embedding:{self.embedding_model}:{text_hash}"
+
+    async def _get_cached_embedding(self, text: str) -> List[float] | None:
+        """
+        Get embedding from Redis cache.
+
+        Args:
+            text: Input text
+
+        Returns:
+            Cached embedding or None if not found
+        """
+        try:
+            cache = await self._get_redis()
+            cache_key = self._cache_key(text)
+            cached = await cache.get(cache_key)
+
+            if cached:
+                logger.debug(f"Cache hit for embedding (key: {cache_key[:20]}...)")
+                return json.loads(cached)
+
+            logger.debug(f"Cache miss for embedding (key: {cache_key[:20]}...)")
+            return None
+
+        except Exception as e:
+            logger.warning(f"Redis cache read error: {e}")
+            return None
+
+    async def _set_cached_embedding(self, text: str, embedding: List[float]) -> None:
+        """
+        Store embedding in Redis cache.
+
+        Args:
+            text: Input text
+            embedding: Embedding vector
+        """
+        try:
+            cache = await self._get_redis()
+            cache_key = self._cache_key(text)
+            await cache.setex(
+                cache_key,
+                self.cache_ttl,
+                json.dumps(embedding)
+            )
+            logger.debug(f"Cached embedding (key: {cache_key[:20]}..., TTL: {self.cache_ttl}s)")
+
+        except Exception as e:
+            logger.warning(f"Redis cache write error: {e}")
+
+    def _get_cached_embedding_sync(self, text: str) -> List[float] | None:
+        """
+        Get embedding from Redis cache (sync).
+
+        Args:
+            text: Input text
+
+        Returns:
+            Cached embedding or None if not found
+        """
+        try:
+            cache = self._get_redis_sync()
+            cache_key = self._cache_key(text)
+            cached = cache.get(cache_key)
+
+            if cached:
+                logger.debug(f"Cache hit for embedding (key: {cache_key[:20]}...)")
+                return json.loads(cached)
+
+            logger.debug(f"Cache miss for embedding (key: {cache_key[:20]}...)")
+            return None
+
+        except Exception as e:
+            logger.warning(f"Redis cache read error: {e}")
+            return None
+
+    def _set_cached_embedding_sync(self, text: str, embedding: List[float]) -> None:
+        """
+        Store embedding in Redis cache (sync).
+
+        Args:
+            text: Input text
+            embedding: Embedding vector
+        """
+        try:
+            cache = self._get_redis_sync()
+            cache_key = self._cache_key(text)
+            cache.setex(
+                cache_key,
+                self.cache_ttl,
+                json.dumps(embedding)
+            )
+            logger.debug(f"Cached embedding (key: {cache_key[:20]}..., TTL: {self.cache_ttl}s)")
+
+        except Exception as e:
+            logger.warning(f"Redis cache write error: {e}")
+
+    @retry(
+        retry=retry_if_exception_type((RateLimitError, APIError)),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        before_sleep=before_sleep_log(logger, logging.WARNING)
+    )
+    async def create_embedding(self, text: str) -> List[float]:
+        """
+        Create embedding vector for text with retry logic.
+
+        Automatically retries on:
+        - Rate limit errors (429)
+        - Temporary API errors (5xx)
+
+        Args:
+            text: Text to embed (max 8191 tokens for text-embedding-3-small)
+
+        Returns:
+            Embedding vector (1536 dimensions for text-embedding-3-small)
+
+        Raises:
+            OpenAIError: If API call fails after retries
+            ValueError: If text is empty or too long
+        """
+        if not text or not text.strip():
+            raise ValueError("Text cannot be empty")
+
+        # Truncate if too long (rough estimate: 1 token ≈ 4 chars)
+        max_chars = 8191 * 4
+        if len(text) > max_chars:
+            text = text[:max_chars]
+            logger.warning(f"Text truncated to {max_chars} characters for embedding")
+
+        # Check cache first
+        cached_embedding = await self._get_cached_embedding(text)
+        if cached_embedding:
+            return cached_embedding
+
+        try:
+            logger.debug(f"Creating embedding for text (length: {len(text)} chars)")
+
+            response = await self.client.embeddings.create(
+                model=self.embedding_model,
+                input=text,
+                encoding_format="float"
+            )
+
+            embedding = response.data[0].embedding
+
+            # Cache the result
+            await self._set_cached_embedding(text, embedding)
+
+            logger.debug(f"Embedding created successfully (dimensions: {len(embedding)})")
+            return embedding
+
+        except RateLimitError as e:
+            logger.error(f"Rate limit exceeded: {e}")
+            raise
+        except APIError as e:
+            logger.error(f"OpenAI API error: {e}")
+            raise
+        except OpenAIError as e:
+            logger.error(f"OpenAI error: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error creating embedding: {e}")
+            raise
+
+    @retry(
+        retry=retry_if_exception_type((RateLimitError, APIError)),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        before_sleep=before_sleep_log(logger, logging.WARNING)
+    )
+    def create_embedding_sync(self, text: str) -> List[float]:
+        """
+        Synchronous version of create_embedding for Celery workers.
+
+        Automatically retries on:
+        - Rate limit errors (429)
+        - Temporary API errors (5xx)
+
+        Args:
+            text: Text to embed (max 8191 tokens for text-embedding-3-small)
+
+        Returns:
+            Embedding vector (1536 dimensions for text-embedding-3-small)
+
+        Raises:
+            OpenAIError: If API call fails after retries
+            ValueError: If text is empty or too long
+        """
+        if not text or not text.strip():
+            raise ValueError("Text cannot be empty")
+
+        # Truncate if too long (rough estimate: 1 token ≈ 4 chars)
+        max_chars = 8191 * 4
+        if len(text) > max_chars:
+            text = text[:max_chars]
+            logger.warning(f"Text truncated to {max_chars} characters for embedding")
+
+        # Check cache first
+        cached_embedding = self._get_cached_embedding_sync(text)
+        if cached_embedding:
+            return cached_embedding
+
+        try:
+            logger.debug(f"Creating embedding (sync) for text (length: {len(text)} chars)")
+
+            response = self.sync_client.embeddings.create(
+                model=self.embedding_model,
+                input=text,
+                encoding_format="float"
+            )
+
+            embedding = response.data[0].embedding
+
+            # Cache the result
+            self._set_cached_embedding_sync(text, embedding)
+
+            logger.debug(f"Embedding created successfully (dimensions: {len(embedding)})")
+            return embedding
+
+        except RateLimitError as e:
+            logger.error(f"Rate limit exceeded: {e}")
+            raise
+        except APIError as e:
+            logger.error(f"OpenAI API error: {e}")
+            raise
+        except OpenAIError as e:
+            logger.error(f"OpenAI error: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error creating embedding: {e}")
+            raise
+
+    @retry(
+        retry=retry_if_exception_type((RateLimitError, APIError)),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        before_sleep=before_sleep_log(logger, logging.WARNING)
+    )
+    async def create_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
+        """
+        Create embeddings for multiple texts in a single API call (async).
+
+        Optimized for cost: 1 API call instead of N calls.
+        OpenAI limit: max 100 inputs per request.
+
+        Args:
+            texts: List of texts to embed (max 100)
+
+        Returns:
+            List of embedding vectors in same order as input texts
+
+        Raises:
+            ValueError: If texts list is empty or has more than 100 items
+            OpenAIError: If API call fails after retries
+        """
+        if not texts:
+            raise ValueError("Texts list cannot be empty")
+
+        if len(texts) > 100:
+            raise ValueError(
+                f"Too many texts ({len(texts)}). OpenAI limit is 100 per batch. "
+                "Split into multiple batches."
+            )
+
+        # Filter out empty texts and keep track of indices
+        valid_texts = []
+        valid_indices = []
+        for i, text in enumerate(texts):
+            if text and text.strip():
+                valid_texts.append(text)
+                valid_indices.append(i)
+
+        if not valid_texts:
+            raise ValueError("All texts are empty")
+
+        try:
+            logger.info(f"Creating batch embeddings for {len(valid_texts)} texts")
+
+            response = await self.client.embeddings.create(
+                model=self.embedding_model,
+                input=valid_texts,
+                encoding_format="float"
+            )
+
+            # Extract embeddings in order
+            embeddings = [item.embedding for item in response.data]
+
+            logger.info(
+                f"Batch embeddings created successfully "
+                f"({len(embeddings)} embeddings, {len(embeddings[0])} dimensions)"
+            )
+
+            # Reconstruct full list with None for empty texts
+            result = [None] * len(texts)
+            for idx, embedding in zip(valid_indices, embeddings):
+                result[idx] = embedding
+
+            return result
+
+        except RateLimitError as e:
+            logger.error(f"Rate limit exceeded on batch: {e}")
+            raise
+        except APIError as e:
+            logger.error(f"OpenAI API error on batch: {e}")
+            raise
+        except OpenAIError as e:
+            logger.error(f"OpenAI error on batch: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error creating batch embeddings: {e}")
+            raise
+
+    @retry(
+        retry=retry_if_exception_type((RateLimitError, APIError)),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        before_sleep=before_sleep_log(logger, logging.WARNING)
+    )
+    def create_embeddings_batch_sync(self, texts: List[str]) -> List[List[float]]:
+        """
+        Synchronous version of create_embeddings_batch for Celery workers.
+
+        Create embeddings for multiple texts in a single API call.
+        OpenAI limit: max 100 inputs per request.
+
+        Args:
+            texts: List of texts to embed (max 100)
+
+        Returns:
+            List of embedding vectors in same order as input texts
+
+        Raises:
+            ValueError: If texts list is empty or has more than 100 items
+            OpenAIError: If API call fails after retries
+        """
+        if not texts:
+            raise ValueError("Texts list cannot be empty")
+
+        if len(texts) > 100:
+            raise ValueError(
+                f"Too many texts ({len(texts)}). OpenAI limit is 100 per batch. "
+                "Split into multiple batches."
+            )
+
+        # Filter out empty texts and keep track of indices
+        valid_texts = []
+        valid_indices = []
+        for i, text in enumerate(texts):
+            if text and text.strip():
+                valid_texts.append(text)
+                valid_indices.append(i)
+
+        if not valid_texts:
+            raise ValueError("All texts are empty")
+
+        try:
+            logger.info(f"Creating batch embeddings (sync) for {len(valid_texts)} texts")
+
+            response = self.sync_client.embeddings.create(
+                model=self.embedding_model,
+                input=valid_texts,
+                encoding_format="float"
+            )
+
+            # Extract embeddings in order
+            embeddings = [item.embedding for item in response.data]
+
+            logger.info(
+                f"Batch embeddings created successfully "
+                f"({len(embeddings)} embeddings, {len(embeddings[0])} dimensions)"
+            )
+
+            # Reconstruct full list with None for empty texts
+            result = [None] * len(texts)
+            for idx, embedding in zip(valid_indices, embeddings):
+                result[idx] = embedding
+
+            return result
+
+        except RateLimitError as e:
+            logger.error(f"Rate limit exceeded on batch: {e}")
+            raise
+        except APIError as e:
+            logger.error(f"OpenAI API error on batch: {e}")
+            raise
+        except OpenAIError as e:
+            logger.error(f"OpenAI error on batch: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error creating batch embeddings: {e}")
+            raise
 
     def chunk_text(self, text: str) -> List[str]:
         """
@@ -136,7 +568,7 @@ class RAGService:
                 document_id,
                 document_type,
                 chunk_text,
-                metadata,
+                meta_data as metadata,
                 1 - (embedding <=> :query_embedding) as similarity
             FROM document_embeddings
             WHERE 1=1 {type_filter}

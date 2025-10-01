@@ -3,15 +3,16 @@ SQLAlchemy models for Tender Documents.
 """
 from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import Column, String, Text, Integer, DateTime, JSON, ForeignKey
+
+from app.models.base import Base
+from sqlalchemy import (JSON, Column, DateTime, ForeignKey, Integer, String,
+                        Text)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from app.models.base import Base
-
 
 class TenderDocument(Base):
-    """Documents uploaded for a tender (CCTP, RC, AE, etc.)"""
+    """Documents uploaded for a tender (CCTP, CCAP, RC, AE, etc.)"""
 
     __tablename__ = "tender_documents"
 
@@ -25,7 +26,7 @@ class TenderDocument(Base):
     mime_type = Column(String(100))
 
     # Document type
-    document_type = Column(String(50), index=True)  # CCTP, RC, AE, BPU, DUME, ANNEXE
+    document_type = Column(String(50), index=True)  # CCTP, CCAP, RC, AE, BPU, DUME, ANNEXE
 
     # Extraction status
     extraction_status = Column(String(50), default="pending", index=True)  # pending, processing, completed, failed

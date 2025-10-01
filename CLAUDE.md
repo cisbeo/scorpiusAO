@@ -20,6 +20,16 @@ ScorpiusAO is an AI copilot application for bid managers responding to French pu
 - **AWS PLACE** (Plateforme des Achats de l'État)
 - Regional public procurement platforms
 
+### Tender Document Types
+The application handles the following standardized French public procurement documents:
+- **CCTP** (Cahier des Clauses Techniques Particulières): Technical specifications
+- **CCAP** (Cahier des Clauses Administratives Particulières): Administrative clauses, penalties, payment terms
+- **RC** (Règlement de Consultation): Tender rules, evaluation criteria
+- **AE** (Acte d'Engagement): Price commitment form
+- **BPU** (Bordereau des Prix Unitaires): Unit price breakdown
+- **DUME** (Document Unique de Marché Européen): European Single Procurement Document
+- **ANNEXE**: Supporting documents
+
 ## Architecture
 
 ### Technology Stack
