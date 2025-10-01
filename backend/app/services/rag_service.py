@@ -7,6 +7,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import warnings
 from openai import AsyncOpenAI, OpenAI, OpenAIError, RateLimitError, APIError
 import redis.asyncio as redis
 import redis as redis_sync
@@ -23,6 +24,8 @@ from tenacity import (
 
 from app.core.config import settings
 from app.models.document import DocumentEmbedding
+from app.services.chunking.factory import get_chunking_strategy
+from app.services.chunking.base import Chunk
 
 logger = logging.getLogger(__name__)
 
@@ -471,7 +474,10 @@ class RAGService:
 
     def chunk_text(self, text: str) -> List[str]:
         """
-        Split text into chunks with overlap.
+        DEPRECATED: Use smart chunking strategies instead.
+
+        This method will be removed in PHASE 3.
+        Use ingest_document() with document_type for smart chunking.
 
         Args:
             text: Text to chunk
@@ -479,15 +485,25 @@ class RAGService:
         Returns:
             List of text chunks
         """
-        words = text.split()
-        chunks = []
+        # Q7: Backward compatibility with deprecation warning
+        warnings.warn(
+            "chunk_text() is deprecated and will be removed in PHASE 3. "
+            "Use ingest_document() with document_type for smart chunking strategies.",
+            DeprecationWarning,
+            stacklevel=2
+        )
 
-        for i in range(0, len(words), self.chunk_size - self.chunk_overlap):
-            chunk = " ".join(words[i:i + self.chunk_size])
-            if chunk:
-                chunks.append(chunk)
+        # Redirect to FixedChunkingStrategy
+        from app.services.chunking.fixed import FixedChunkingStrategy
 
-        return chunks
+        strategy = FixedChunkingStrategy(
+            target_chunk_size=self.chunk_size,
+            max_chunk_size=self.chunk_size * 2,
+            overlap=self.chunk_overlap
+        )
+
+        chunks = strategy.chunk(text)
+        return [chunk.text for chunk in chunks]
 
     async def ingest_document(
         self,
@@ -498,34 +514,63 @@ class RAGService:
         metadata: Dict[str, Any] | None = None
     ) -> int:
         """
-        Ingest document into vector database.
+        Ingest document into vector database with smart chunking (PHASE 2).
+
+        Automatically selects optimal chunking strategy based on document_type:
+        - past_proposal: SectionChunkingStrategy (512-1024 tokens, H1-H3 detection)
+        - certification: SemanticChunkingStrategy (256-512 tokens, paragraphs)
+        - case_study: SectionChunkingStrategy (512-1024 tokens)
+        - documentation: SectionChunkingStrategy (512-1024 tokens)
+        - template: NoSplitChunkingStrategy (single chunk if possible)
+
+        Enriched metadata (Q5 - all 5 fields):
+        - section_title, section_level, section_number, parent_section, content_type
 
         Args:
             db: Database session
             document_id: Unique document identifier
             content: Document content
-            document_type: Type of document (tender, proposal, certification, etc.)
-            metadata: Additional metadata
+            document_type: Type of document (past_proposal, certification, etc.)
+            metadata: Additional base metadata
 
         Returns:
             Number of chunks created
         """
-        chunks = self.chunk_text(content)
         metadata = metadata or {}
 
-        count = 0
-        for idx, chunk in enumerate(chunks):
-            embedding = await self.create_embedding(chunk)
+        # PHASE 2: Use smart chunking strategy (Q1-Q6 validated)
+        strategy = get_chunking_strategy(document_type=document_type)
 
+        chunks: List[Chunk] = strategy.chunk(content, metadata)
+
+        logger.info(
+            f"Chunking document {document_id} ({document_type}) with "
+            f"{strategy.__class__.__name__}: {len(chunks)} chunks created"
+        )
+
+        count = 0
+        for chunk in chunks:
+            # Create embedding
+            embedding = await self.create_embedding(chunk.text)
+
+            # Store in database with enriched metadata
             doc_embedding = DocumentEmbedding(
                 document_id=document_id,
                 document_type=document_type,
-                chunk_text=chunk,
+                chunk_text=chunk.text,
                 embedding=embedding,
                 metadata={
-                    **metadata,
-                    "chunk_index": idx,
-                    "total_chunks": len(chunks)
+                    **chunk.metadata,
+                    # Core chunk metadata
+                    "chunk_index": chunk.index,
+                    "total_chunks": chunk.total_chunks,
+                    "token_count": chunk.token_count,
+                    # Q5: All 5 section metadata fields
+                    "section_title": chunk.section_title,
+                    "section_level": chunk.section_level,
+                    "section_number": chunk.section_number,
+                    "parent_section": chunk.parent_section,
+                    "content_type": chunk.content_type
                 }
             )
 
@@ -533,6 +578,11 @@ class RAGService:
             count += 1
 
         await db.commit()
+
+        logger.info(
+            f"Successfully ingested document {document_id}: {count} chunks stored"
+        )
+
         return count
 
     async def retrieve_relevant_content(
