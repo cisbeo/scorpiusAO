@@ -6,17 +6,6 @@ Application IA destinée aux bid managers pour répondre aux appels d'offres pub
 
 ## 🚀 Quick Start
 
-### Infrastructure lancée
-
-Les services d'infrastructure Docker sont actuellement démarrés et opérationnels :
-
-| Service | Status | Port | Interface |
-|---------|--------|------|-----------|
-| **PostgreSQL** (pgvector) | ✅ Healthy | 5433 | - |
-| **Redis** | ✅ Healthy | 6379 | - |
-| **RabbitMQ** | ✅ Healthy | 5672 | Management UI: http://localhost:15672 |
-| **MinIO** | ✅ Healthy | 9000 | Console: http://localhost:9001 |
-
 ### Accès aux interfaces
 
 - **RabbitMQ Management**: http://localhost:15672 (guest/guest)
@@ -96,18 +85,6 @@ pytest
 pytest --cov=app
 ```
 
-### ⚠️ Note importante sur Celery
-
-**Mode actuel (Développement)**: `--pool=solo`
-- Une seule tâche à la fois
-- Compatible avec le code asyncio actuel
-- Idéal pour tests et validation du workflow
-
-**Migration vers Production** (TODO - voir section "Architecture Notes" ci-dessous):
-- Refactoriser les tasks Celery en version synchrone
-- Utiliser le mode `prefork` pour parallélisme
-- Nécessite 2-4h de développement
-
 ### Docker
 
 ```bash
@@ -169,18 +146,6 @@ Variables essentielles :
 - `OPENAI_API_KEY` - Clé API OpenAI (pour embeddings)
 - `DATABASE_URL` - Connexion PostgreSQL
 - `REDIS_URL` - Connexion Redis
-
-## 🏗️ Architecture Notes
-
-### Celery + Asyncio: Migration Production
-
-#### Problème actuel
-
-Les tasks Celery utilisent du code asyncio (AsyncSession, asyncpg) qui n'est pas compatible avec le mode `prefork` multi-processus de Celery.
-
-**Solution temporaire (dev)**: Mode `--pool=solo` (une seule tâche à la fois)
-
-**Solution production**: Refactoriser les tasks en version synchrone
 
 #### Plan de migration vers production
 
