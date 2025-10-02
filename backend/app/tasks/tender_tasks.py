@@ -113,17 +113,80 @@ def process_tender_document(self, document_id: str):
                     use_ocr=True
                 )
 
-            # 4. Update document with extracted text
+            # 4. Update document with extracted text AND structured data
             document.extracted_text = extraction_result["text"]
             document.page_count = extraction_result["page_count"]
             document.extraction_method = extraction_result["extraction_method"]
-            document.extraction_meta_data = extraction_result["metadata"]
+
+            # Store COMPLETE extraction results (metadata + sections + tables + structured)
+            document.extraction_meta_data = {
+                "metadata": extraction_result.get("metadata", {}),
+                "sections": extraction_result.get("sections", []),
+                "tables": extraction_result.get("tables", []),
+                "structured": extraction_result.get("structured", {}),
+                "stats": {
+                    "sections_count": len(extraction_result.get("sections", [])),
+                    "sections_with_content": len([s for s in extraction_result.get("sections", []) if s.get("content_length", 0) > 0]),
+                    "tables_count": len(extraction_result.get("tables", [])),
+                    "text_length": len(extraction_result.get("text", ""))
+                }
+            }
+
             document.extraction_status = "completed"
             document.processed_at = datetime.utcnow()
 
             db.commit()
 
-            print(f"✅ Document {document_id} processed: {len(extraction_result['text'])} chars extracted")
+            # 5. Save structured sections to document_sections table
+            from app.models.document_section import DocumentSection
+            sections_data = extraction_result.get("sections", [])
+            sections_saved = 0
+
+            if sections_data:
+                print(f"💾 Saving {len(sections_data)} sections to database...")
+
+                # PASS 1: Insert sections with parent_number
+                for section_data in sections_data:
+                    section = DocumentSection(
+                        document_id=document.id,
+                        section_type=section_data.get("type", "UNKNOWN"),
+                        section_number=section_data.get("number"),
+                        parent_number=section_data.get("parent_number"),  # NEW: for hierarchy
+                        title=section_data.get("title", ""),
+                        content=section_data.get("content"),
+                        content_length=section_data.get("content_length", 0),
+                        content_truncated=section_data.get("content_truncated", False),
+                        page=section_data.get("page", 1),
+                        line=section_data.get("line"),
+                        level=section_data.get("level", 1),
+                        is_toc=section_data.get("is_toc", False),
+                        is_key_section=section_data.get("is_key_section", False),
+                    )
+                    db.add(section)
+                    sections_saved += 1
+
+                db.commit()
+
+                # PASS 2: Resolve parent_id via SQL JOIN on parent_number
+                from sqlalchemy import text
+                db.execute(text("""
+                    UPDATE document_sections AS child
+                    SET parent_id = parent.id
+                    FROM document_sections AS parent
+                    WHERE child.document_id = :doc_id
+                      AND child.parent_number IS NOT NULL
+                      AND child.parent_number = parent.section_number
+                      AND parent.document_id = :doc_id
+                """), {"doc_id": str(document.id)})
+
+                db.commit()
+                print(f"   ✓ Saved {sections_saved} sections to database (with hierarchy)")
+
+            stats = document.extraction_meta_data.get("stats", {})
+            print(f"✅ Document {document_id} processed:")
+            print(f"   - Text: {stats.get('text_length', 0)} chars")
+            print(f"   - Sections: {stats.get('sections_count', 0)} total, {stats.get('sections_with_content', 0)} with content ({sections_saved} saved to DB)")
+            print(f"   - Tables: {stats.get('tables_count', 0)}")
 
             return {
                 "status": "success",
