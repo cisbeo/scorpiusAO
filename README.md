@@ -4,89 +4,208 @@
 
 Application IA destinée aux bid managers pour répondre aux appels d'offres publics français, spécialisée dans les infrastructures IT, l'hébergement datacenter et les services de support IT.
 
+---
+
+## 🎯 État du Projet
+
+### ✅ Phase 1 - Backend MVP (COMPLÉTÉ)
+
+**Extraction & Analyse de Documents**
+- ✅ Upload et stockage PDF (MinIO)
+- ✅ Extraction de texte multi-format (PyPDF2, pdfplumber, OCR Tesseract)
+- ✅ Détection de structure hiérarchique (sections, TOC, numérotation)
+- ✅ Détection automatique de sections clés (critères, processus ITIL, exclusions, pénalités)
+- ✅ Optimisation hiérarchique pour LLM (-20% tokens)
+- ✅ Analyse IA complète avec Claude Sonnet 4.5
+- ✅ Extraction de critères structurés
+- ✅ Pipeline asynchrone Celery robuste
+
+**Infrastructure**
+- ✅ Base de données PostgreSQL 15 + pgvector
+- ✅ Redis cache (API responses + embeddings)
+- ✅ RabbitMQ + Celery workers
+- ✅ MinIO S3-compatible storage
+- ✅ Docker Compose orchestration
+
+**Résultats Validés (Test E2E)**
+- 377 sections extraites du tender VSGP-AO
+- 106 sections clés détectées (28%)
+- 18/18 processus ITIL identifiés
+- Analyse LLM: $0.12 (32k tokens input, 1.6k output)
+- Économie structurelle: -20% tokens vs approche flat
+
+### 🔨 Phase 2 - Améliorations en Cours
+
+**Parsing Avancé de Tableaux** ([Issue #1](https://github.com/cisbeo/scorpiusAO/issues/1))
+- 📋 3 solutions identifiées (enrichissement prompt, post-processing, Camelot)
+- 📋 Documentation technique complète
+- ⏳ Implémentation planifiée
+
+**Tests & Qualité**
+- ✅ Suite de tests E2E documentée ([scripts/tests/](scripts/tests/))
+- ✅ Procédure de validation complète
+- ✅ Scripts réutilisables pour CI/CD
+
+### 🚧 Phase 3 - Prochaines Étapes
+
+**RAG Service** (Priorité HAUTE)
+- ⚠️ Structure implémentée, à compléter
+- Embeddings OpenAI à intégrer
+- Recherche vectorielle pgvector à tester
+
+**API REST**
+- ✅ Endpoints tenders CRUD
+- ✅ Upload documents
+- ✅ Déclenchement analyse
+- ⏳ WebSocket pour notifications temps réel
+
+**Frontend** (Non démarré)
+- Dashboard tenders
+- Interface upload documents
+- Visualisation analyses
+- Éditeur de réponses
+
+---
+
 ## 🚀 Quick Start
 
-### Accès aux interfaces
+### Prérequis
 
-- **RabbitMQ Management**: <http://localhost:15672> (guest/guest)
-- **MinIO Console**: <http://localhost:9001> (minioadmin/minioadmin)
+- Docker & Docker Compose
+- Python 3.11+
+- Clé API Anthropic (Claude)
+- Clé API OpenAI (pour embeddings - optionnel)
 
-## 📁 Structure du projet
+### Installation
+
+```bash
+# Cloner le repo
+git clone https://github.com/cisbeo/scorpiusAO.git
+cd ScorpiusAO
+
+# Configurer l'environnement
+cd backend
+cp .env.example .env
+# Éditez .env avec vos clés API
+
+# Démarrer l'infrastructure
+docker-compose up -d
+
+# Vérifier que tous les services sont actifs
+docker-compose ps
+```
+
+### Accès aux Interfaces
+
+- **API Documentation**: http://localhost:8000/docs
+- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
+- **MinIO Console**: http://localhost:9001 (minioadmin/minioadmin)
+- **Flower (Celery)**: http://localhost:5555
+
+### Test End-to-End
+
+```bash
+# Copier les PDFs de test
+docker exec scorpius-celery-worker mkdir -p /app/real_pdfs
+docker cp Examples/VSGP-AO/CCTP.pdf scorpius-celery-worker:/app/real_pdfs/
+docker cp Examples/VSGP-AO/CCAP.pdf scorpius-celery-worker:/app/real_pdfs/
+docker cp Examples/VSGP-AO/RC.pdf scorpius-celery-worker:/app/real_pdfs/
+
+# Exécuter le test E2E complet
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_fresh_e2e.py
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_hierarchical_analysis.py
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_llm_analysis.py
+```
+
+Documentation complète: [scripts/tests/TEST_END_TO_END.md](scripts/tests/TEST_END_TO_END.md)
+
+---
+
+## 📁 Structure du Projet
 
 ```
 ScorpiusAO/
-├── backend/              # API FastAPI + services Python
+├── backend/                          # API FastAPI + services Python
 │   ├── app/
-│   │   ├── api/v1/      # Endpoints REST
-│   │   ├── services/    # LLM, RAG, Parser
-│   │   ├── models/      # SQLAlchemy models
-│   │   ├── schemas/     # Pydantic schemas
-│   │   └── tasks/       # Celery async tasks
-│   ├── alembic/         # Database migrations
-│   ├── tests/
-│   └── docker-compose.yml
-├── frontend/            # (À venir) Next.js + TypeScript
-└── CLAUDE.md           # Documentation pour Claude Code
-
+│   │   ├── api/v1/endpoints/        # Routes REST
+│   │   │   ├── tenders.py           # CRUD tenders
+│   │   │   ├── tender_documents.py  # Upload & gestion docs
+│   │   │   ├── tender_analysis.py   # Analyse IA
+│   │   │   └── analysis.py          # Status & résultats
+│   │   ├── services/
+│   │   │   ├── llm_service.py       # ✅ Claude API (async + sync)
+│   │   │   ├── parser_service.py    # ✅ Extraction PDF + structure
+│   │   │   ├── storage_service.py   # ✅ MinIO S3
+│   │   │   └── rag_service.py       # ⚠️ Embeddings (à compléter)
+│   │   ├── models/                  # ✅ SQLAlchemy ORM (9 tables)
+│   │   ├── schemas/                 # ✅ Pydantic validation
+│   │   ├── tasks/                   # ✅ Celery async pipeline
+│   │   └── core/
+│   │       ├── config.py            # Settings & env vars
+│   │       └── prompts.py           # Templates LLM optimisés
+│   ├── alembic/                     # Migrations DB (4 versions)
+│   ├── docker-compose.yml           # Orchestration services
+│   └── SOLUTIONS_PARSING_TABLEAUX.md # Doc technique parsing
+├── scripts/tests/                   # ✅ Suite de tests E2E
+│   ├── test_fresh_e2e.py
+│   ├── test_llm_analysis.py
+│   ├── test_hierarchical_analysis.py
+│   ├── TEST_END_TO_END.md           # Guide complet
+│   └── README.md
+├── Examples/VSGP-AO/                # Documents de test réels
+│   ├── CCTP.pdf (2.3 MB, 69 pages)
+│   ├── CCAP.pdf (486 KB, 38 pages)
+│   └── RC.pdf (256 KB, 12 pages)
+├── ARCHITECTURE.md                  # Architecture technique détaillée
+├── ROADMAP.md                       # Feuille de route
+├── IMPLEMENTATION_SUMMARY.md        # Résumé implémentation
+└── CLAUDE.md                        # Guide pour Claude Code
 ```
 
-## 🛠️ Technologies
+---
+
+## 🛠️ Stack Technique
 
 ### Backend
-
-- **API**: FastAPI (Python 3.11+)
-- **AI**: Claude Sonnet 4.5, OpenAI Embeddings
-- **Database**: PostgreSQL 15 + pgvector
-- **Cache**: Redis 7
-- **Queue**: RabbitMQ + Celery
+- **API**: FastAPI (Python 3.11+) avec async/await
+- **AI**: Claude Sonnet 4.5 (Anthropic) + prompt caching
+- **Database**: PostgreSQL 15 + pgvector extension
+- **Cache**: Redis 7 (API responses, embeddings)
+- **Queue**: RabbitMQ + Celery workers
 - **Storage**: MinIO (S3-compatible)
-- **OCR**: Tesseract
+- **PDF Parsing**: PyPDF2, pdfplumber, Tesseract OCR
 
 ### Frontend (À venir)
+- Next.js 14+ (App Router)
+- TypeScript
+- Tailwind CSS + shadcn/ui
+- React Query (cache)
 
-- **Framework**: Next.js 14+
-- **Language**: TypeScript
-- **UI**: React + TailwindCSS
+---
 
-## 📋 Prochaines étapes
-
-### Backend
-
-1. ✅ Structure du projet créée
-2. ✅ Services d'infrastructure lancés
-3. ⏳ Créer les migrations de base de données
-4. ⏳ Tester les endpoints API
-5. ⏳ Implémenter les services (LLM, RAG, Parser)
-
-### Frontend
-
-1. ⏳ Initialiser le projet Next.js
-2. ⏳ Créer les composants UI
-3. ⏳ Intégrer avec l'API backend
-
-## 🔧 Commandes utiles
+## 🔧 Commandes Utiles
 
 ### Backend
 
 ```bash
 cd backend
 
-# Créer et appliquer une migration
+# Créer une migration
 alembic revision --autogenerate -m "description"
 alembic upgrade head
+
+# Rollback
+alembic downgrade -1
 
 # Démarrer l'API (développement local)
 uvicorn app.main:app --reload --port 8000
 
-# Démarrer Celery worker (DÉVELOPPEMENT - mode solo pour compatibilité asyncio)
-celery -A app.core.celery_app worker --pool=solo --loglevel=info
-
-# Démarrer Celery worker (PRODUCTION - voir note ci-dessous)
-# celery -A app.core.celery_app worker --loglevel=info
+# Démarrer Celery worker
+celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
 
 # Tests
 pytest
-pytest --cov=app
+pytest --cov=app --cov-report=html
 ```
 
 ### Docker
@@ -97,8 +216,11 @@ cd backend
 # Démarrer tous les services
 docker-compose up -d
 
-# Voir les logs
-docker-compose logs -f
+# Voir les logs d'un service
+docker-compose logs -f celery-worker
+
+# Rebuild après changements
+docker-compose up -d --build
 
 # Arrêter les services
 docker-compose down
@@ -107,165 +229,247 @@ docker-compose down
 docker-compose down -v
 ```
 
-## 📚 Documentation
+### Tests E2E
 
-- [CLAUDE.md](CLAUDE.md) - Guide complet pour Claude Code
-- [Backend README](backend/README.md) - Documentation backend détaillée
-- API Docs: <http://localhost:8000/docs> (une fois l'API lancée)
+```bash
+# Test complet avec reset DB
+./scripts/tests/reset_test_env.sh
+./scripts/tests/run_e2e_test.sh
 
-## 🎯 Fonctionnalités principales
+# Validation rapide de l'état actuel
+./scripts/tests/quick_validate.sh
 
-1. **Analyse d'appels d'offres**
-   - Extraction automatique des critères
-   - Identification des documents obligatoires
-   - Analyse des risques et dates limites
+# Tests individuels
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_fresh_e2e.py
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_llm_analysis.py
+```
 
-2. **Génération de réponses**
-   - Sections générées par IA adaptées au contexte
-   - Bibliothèque de réponses réutilisables
-   - Vérification de conformité en temps réel
+---
 
-3. **Base de connaissances (RAG)**
-   - Recherche sémantique dans les documents
-   - Projets antérieurs et certifications
-   - Références clients et études de cas
+## 🎯 Fonctionnalités
 
-4. **Export de documents**
-   - Génération DUME, DC4
-   - Formats spécifiques aux plateformes
-   - Mémoire technique complet
+### ✅ Implémentées
+
+**1. Analyse d'Appels d'Offres**
+- Extraction automatique de structure hiérarchique
+- Détection intelligente de sections clés (processus ITIL, exclusions, critères)
+- Analyse IA complète (résumé, exigences, risques, délais)
+- Extraction de critères d'évaluation avec poids
+- Optimisation token (-20% via hiérarchie)
+
+**2. Gestion de Documents**
+- Upload PDF multi-documents
+- Stockage sécurisé (MinIO)
+- Extraction texte robuste (fallback OCR)
+- Parsing tables (pdfplumber)
+- Métadonnées automatiques
+
+**3. Pipeline Asynchrone**
+- Traitement parallèle documents
+- Suivi progression temps réel (status)
+- Retry automatique sur erreur
+- Cache Redis pour performances
+
+### 🚧 En Développement
+
+**4. Amélioration Parsing Tableaux**
+- Reconstruction markdown de tableaux complexes
+- Post-processing spatial des cellules
+- Fallback Camelot pour tables difficiles
+
+**5. Base de Connaissances (RAG)**
+- Embeddings OpenAI (à compléter)
+- Recherche vectorielle pgvector
+- Suggestions basées sur tenders passés
+
+### 📋 Planifiées
+
+**6. Génération de Réponses**
+- Sections pré-remplies par IA
+- Templates personnalisables
+- Bibliothèque de contenu réutilisable
+- Export Word/PDF
+
+**7. Interface Web**
+- Dashboard tenders
+- Upload drag & drop
+- Visualisation analyses
+- Éditeur collaboratif
+
+**8. Intégrations Externes**
+- Scraper BOAMP automatique
+- Connecteur AWS PLACE
+- Notifications email
+
+**9. Outils Avancés**
+- Génération DUME/DC4 automatique
+- Scoring simulation
+- Mémo technique auto-généré
+
+---
 
 ## 🔐 Configuration
 
-Copiez `.env.example` vers `.env` et configurez vos clés API :
+### Variables d'Environnement
+
+Copiez `.env.example` vers `.env` et configurez :
 
 ```bash
 cd backend
 cp .env.example .env
-# Éditez .env avec vos clés API
 ```
 
-Variables essentielles :
+**Essentielles**:
+```env
+# Claude API
+ANTHROPIC_API_KEY=sk-ant-api03-...
 
-- `ANTHROPIC_API_KEY` - Clé API Claude
-- `OPENAI_API_KEY` - Clé API OpenAI (pour embeddings)
-- `DATABASE_URL` - Connexion PostgreSQL
-- `REDIS_URL` - Connexion Redis
+# OpenAI (pour embeddings)
+OPENAI_API_KEY=sk-...
 
-#### Plan de migration vers production
+# Database
+DATABASE_URL=postgresql+asyncpg://scorpius:scorpius_password@postgres:5432/scorpius_db
 
-##### 1. Créer une session DB synchrone pour Celery
+# Redis
+REDIS_URL=redis://redis:6379/0
 
-```python
-# app/models/base.py
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+# Celery
+CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+CELERY_RESULT_BACKEND=redis://redis:6379/1
 
-# Sync engine pour Celery tasks
-sync_engine_celery = create_engine(
-    settings.database_url_sync,  # postgresql://... (sans +asyncpg)
-    pool_size=10,
-    max_overflow=20,
-    echo=settings.debug,
-)
-
-CelerySessionLocal = sessionmaker(
-    sync_engine_celery,
-    autocommit=False,
-    autoflush=False,
-)
+# MinIO
+MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
 ```
 
-##### 2. Refactoriser les tasks en sync
+**Optionnelles**:
+```env
+# Feature flags
+ENABLE_HIERARCHICAL_OPTIMIZATION=true
+ENABLE_OCR=true
 
-```python
-# app/tasks/tender_tasks.py
-
-@celery_app.task(bind=True, max_retries=3)
-def process_tender_document(self, document_id: str):
-    """Sync version - production ready."""
-    try:
-        # Utiliser session sync
-        with CelerySessionLocal() as db:
-            stmt = select(TenderDocument).where(TenderDocument.id == document_id)
-            document = db.execute(stmt).scalar_one_or_none()
-
-            # Storage service (déjà sync)
-            file_content = storage_service.download_file(document.file_path)
-
-            # Parser service (PyPDF2 est sync)
-            extraction_result = parser_service.extract_from_pdf_sync(file_content)
-
-            # LLM service - version sync
-            if extraction_result["text"].strip():
-                # Utiliser httpx ou requests au lieu de AsyncClient
-                pass
-
-            document.extracted_text = extraction_result["text"]
-            db.commit()
-
-    except Exception as exc:
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+# LLM settings
+LLM_MODEL=claude-3-5-sonnet-20240620
+MAX_TOKENS=8000
+TEMPERATURE=0.2
 ```
 
-##### 3. Adapter les services
+---
 
-**LLM Service**: Créer version sync
+## 📊 Performances
 
-```python
-# app/services/llm_service.py
+### Metrics Validées (Tender VSGP-AO)
 
-class LLMService:
-    def __init__(self):
-        # Version async (pour API FastAPI)
-        self.async_client = anthropic.AsyncAnthropic(...)
+| Métrique | Valeur | Notes |
+|----------|--------|-------|
+| **Documents traités** | 3 PDFs | CCTP (69p), CCAP (38p), RC (12p) |
+| **Sections extraites** | 377 | Dont 135 TOC, 106 clés |
+| **Processus ITIL détectés** | 18/18 | 100% recall |
+| **Texte total** | ~270,000 chars | ~68k tokens |
+| **Tokens LLM (optimisé)** | 32,637 input | -20% vs flat |
+| **Coût analyse** | $0.12 | Claude Sonnet 4.5 |
+| **Temps extraction** | ~45s | 3 docs en parallèle |
+| **Temps analyse LLM** | ~8s | Avec prompt caching |
 
-        # Version sync (pour Celery)
-        self.sync_client = anthropic.Anthropic(...)
+### Objectifs de Performance
 
-    async def analyze_tender(self, content: str):
-        """Version async pour API."""
-        response = await self.async_client.messages.create(...)
-        return response
+- ✅ Extraction: < 2 min pour 3 documents (ATTEINT: 45s)
+- ✅ Analyse LLM: < 15s (ATTEINT: 8s)
+- ✅ Coût: < $0.20 par tender (ATTEINT: $0.12)
+- ✅ Détection sections clés: > 90% recall (ATTEINT: 100% ITIL)
+- ⏳ Parsing tableaux: > 80% qualité (EN COURS)
 
-    def analyze_tender_sync(self, content: str):
-        """Version sync pour Celery tasks."""
-        response = self.sync_client.messages.create(...)
-        return response
+---
+
+## 📚 Documentation
+
+### Guides Principaux
+- [CLAUDE.md](CLAUDE.md) - Instructions pour Claude Code
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Architecture technique détaillée
+- [ROADMAP.md](ROADMAP.md) - Feuille de route & priorités
+- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - État implémentation
+
+### Documentation Technique
+- [backend/SOLUTIONS_PARSING_TABLEAUX.md](backend/SOLUTIONS_PARSING_TABLEAUX.md) - Solutions parsing tableaux
+- [scripts/tests/TEST_END_TO_END.md](scripts/tests/TEST_END_TO_END.md) - Procédure test E2E
+- [scripts/tests/README.md](scripts/tests/README.md) - Guide scripts de test
+
+### API Documentation
+- **Swagger UI**: http://localhost:8000/docs (une fois l'API lancée)
+- **ReDoc**: http://localhost:8000/redoc
+
+---
+
+## 🧪 Tests
+
+### Tests Unitaires
+
+```bash
+cd backend
+
+# Tous les tests
+pytest
+
+# Avec coverage
+pytest --cov=app --cov-report=html
+open htmlcov/index.html
+
+# Test spécifique
+pytest tests/test_parser_service.py -v
 ```
 
-**Parser Service**: Déjà majoritairement sync (PyPDF2)
+### Tests End-to-End
 
-**Storage Service**: Déjà sync (MinIO SDK)
+```bash
+# Test complet documenté
+cd scripts/tests
+./run_e2e_test.sh
 
-##### 4. Avantages après migration
+# Tests individuels
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_fresh_e2e.py
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_llm_analysis.py
+```
 
-- ✅ Parallélisme complet (12+ workers)
-- ✅ Scalabilité horizontale
-- ✅ Performance production
-- ✅ Gestion de charge élevée (50-100+ documents simultanés)
+---
 
-##### 5. Estimation
+## 🤝 Contribution
 
-- **Temps**: 2-4 heures de développement
-- **Complexité**: Moyenne
-- **Risque**: Faible (pattern standard)
-- **Tests**: Nécessaires pour validation
+### Workflow Git
 
-#### Pourquoi deux patterns (async API + sync Celery) ?
+```bash
+# Créer une branche feature
+git checkout -b feature/nom-fonctionnalite
 
-1. **API FastAPI** reste async:
-   - Performance I/O élevée
-   - Gestion efficace de milliers de requêtes HTTP concurrentes
-   - Standard moderne Python
+# Commits
+git add .
+git commit -m "feat: description"
 
-2. **Celery tasks** deviennent sync:
-   - Compatible avec multiprocessing (prefork)
-   - Pattern standard et robuste
-   - Pas de problèmes d'event loop
+# Push et PR
+git push origin feature/nom-fonctionnalite
+```
 
-C'est une architecture **hybride courante** dans les applications Python modernes.
+### Standards Code
+
+- Python: PEP 8 + type hints
+- Docstrings: Google style
+- Tests: pytest + coverage > 80%
+- Commits: Conventional Commits
+
+---
 
 ## 📝 License
 
 Proprietary - All rights reserved
+
+---
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/cisbeo/scorpiusAO/issues)
+- **Documentation**: Voir fichiers `.md` à la racine du projet
+
+---
+
+**Dernière mise à jour**: 2 octobre 2025
+**Version**: 0.2.0 (MVP Backend)

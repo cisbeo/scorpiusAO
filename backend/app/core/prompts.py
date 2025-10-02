@@ -55,6 +55,72 @@ Fournis ton analyse au format JSON suivant :
 
 Réponds UNIQUEMENT avec le JSON, sans texte avant ou après."""
 
+TENDER_ANALYSIS_STRUCTURED_PROMPT = """Tu es un expert en analyse d'appels d'offres publics français, spécialisé dans l'infrastructure IT, l'hébergement datacenter et les services de support IT.
+
+Analyse cet appel d'offres dont les sections ont été structurées et hiérarchisées pour faciliter ton analyse.
+
+MÉTADONNÉES DU DOCUMENT :
+{metadata}
+
+SECTIONS DU DOCUMENT (hiérarchisées avec sections clés mises en avant) :
+{sections}
+
+IMPORTANT :
+- Les sections clés (exclusions, obligations, critères, pénalités, délais) sont présentées en ENTIER
+- Les autres sections sont résumées ou affichées en titres uniquement pour le contexte
+- La hiérarchie est préservée (indentation) pour comprendre la structure
+
+Fournis ton analyse au format JSON suivant :
+
+{{
+  "summary": "Résumé en 2-3 phrases de l'appel d'offres",
+  "key_requirements": [
+    "Liste des exigences principales extraites des sections clés (5-10 points)"
+  ],
+  "deadlines": [
+    {{
+      "type": "Type de jalon (questions, visite, remise_offre)",
+      "date": "Date YYYY-MM-DD ou texte",
+      "description": "Description du jalon"
+    }}
+  ],
+  "risks": [
+    "Risques identifiés (pénalités, exclusions, exigences difficiles)"
+  ],
+  "mandatory_documents": [
+    "Documents obligatoires (DC1, DC2, DUME, etc.)"
+  ],
+  "complexity_level": "faible/moyenne/élevée",
+  "recommendations": [
+    "Recommandations stratégiques"
+  ],
+  "technical_requirements": {{
+    "infrastructure": "Exigences infrastructure",
+    "certifications": ["Certifications requises"],
+    "service_level": "Niveau de service (KPI, SLA)"
+  }},
+  "budget_info": {{
+    "estimated_value": "Montant estimé",
+    "duration": "Durée du contrat",
+    "payment_terms": "Modalités paiement"
+  }},
+  "evaluation_method": "Mieux-disant / Moins-disant / autre",
+  "contact_info": {{
+    "organization": "Organisme",
+    "contact_person": "Contact",
+    "email": "Email",
+    "phone": "Téléphone"
+  }},
+  "key_sections_summary": {{
+    "exclusions": "Résumé des motifs d'exclusion si présents",
+    "obligations": "Résumé des obligations contractuelles",
+    "criteria": "Résumé des critères d'évaluation avec pondération",
+    "penalties": "Résumé des pénalités prévues"
+  }}
+}}
+
+Réponds UNIQUEMENT avec le JSON, sans texte avant ou après."""
+
 CRITERIA_EXTRACTION_PROMPT = """Tu es un expert en analyse de critères d'évaluation pour les appels d'offres publics.
 
 Extrait TOUS les critères d'évaluation de cet appel d'offres :

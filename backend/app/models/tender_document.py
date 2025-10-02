@@ -43,6 +43,7 @@ class TenderDocument(Base):
 
     # Relationships
     #     tender = relationship("Tender", back_populates="documents")
+    sections = relationship("DocumentSection", back_populates="document", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<TenderDocument {self.filename}>"
