@@ -17,6 +17,7 @@ docker-compose ps
 ```
 
 Conteneurs requis :
+
 - ✅ `scorpius-postgres` (base de données)
 - ✅ `scorpius-redis` (cache)
 - ✅ `scorpius-rabbitmq` (message queue)
@@ -34,6 +35,7 @@ docker exec scorpius-celery-worker python3 -c "from app.core.config import setti
 ### Documents de Test
 
 Les PDFs VSGP-AO doivent être disponibles :
+
 - `Examples/VSGP-AO/CCTP.pdf` (2.3 MB)
 - `Examples/VSGP-AO/CCAP.pdf` (486 KB)
 - `Examples/VSGP-AO/RC.pdf` (256 KB)
@@ -68,6 +70,7 @@ SELECT 'document_sections', COUNT(*) FROM document_sections;
 ```
 
 **Résultat attendu** :
+
 ```
  table_name        | count
 -------------------+-------
@@ -87,15 +90,16 @@ SELECT 'document_sections', COUNT(*) FROM document_sections;
 docker exec scorpius-celery-worker mkdir -p /app/real_pdfs
 
 # Copier les 3 PDFs
-docker cp Examples/VSGP-AO/CCTP.pdf scorpius-celery-worker:/app/real_pdfs/CCTP.pdf
-docker cp Examples/VSGP-AO/CCAP.pdf scorpius-celery-worker:/app/real_pdfs/CCAP.pdf
-docker cp Examples/VSGP-AO/RC.pdf scorpius-celery-worker:/app/real_pdfs/RC.pdf
+docker cp Examples/dce-v1/CCTP.pdf scorpius-celery-worker:/app/real_pdfs/CCTP.pdf
+docker cp Examples/dce-v1/CCAP.pdf scorpius-celery-worker:/app/real_pdfs/CCAP.pdf
+docker cp Examples/dce-v1/RC.pdf scorpius-celery-worker:/app/real_pdfs/RC.pdf
 
 # Vérifier la copie
 docker exec scorpius-celery-worker ls -lh /app/real_pdfs/
 ```
 
 **Résultat attendu** :
+
 ```
 -rw-r--r-- 1 root root 2.3M Oct  2 09:00 CCTP.pdf
 -rw-r--r-- 1 root root 486K Oct  2 09:00 CCAP.pdf
@@ -166,6 +170,7 @@ asyncio.run(upload_docs())
 ```
 
 **Résultats attendus** :
+
 - ✅ 1 tender créé dans la table `tenders`
 - ✅ 3 documents créés dans `tender_documents` (status: `pending`)
 - ✅ 3 fichiers stockés dans MinIO (bucket `tenders/`)
@@ -269,6 +274,7 @@ EOF
 **Résultats attendus** :
 
 #### Statistiques Globales
+
 ```
  toc_sections | key_sections | sections_with_content | sections_with_parent | total_sections
 --------------+--------------+-----------------------+----------------------+----------------
@@ -276,7 +282,9 @@ EOF
 ```
 
 #### Processus ITIL (4.1.5.x)
+
 **Tous les 18 processus doivent être `is_key_section = true`** :
+
 - 4.1.5 - Processus à mettre en œuvre
 - 4.1.5.1 - Gestion des sollicitations
 - 4.1.5.2 - Gestion des évènements
@@ -324,6 +332,7 @@ RÉDUCTION:            25,724 (-21%)   6,431 (-21%)   $0.0193 (-21%)
 ```
 
 **Vérifications** :
+
 - ✅ Réduction tokens : 15-25%
 - ✅ Sections clés en entier
 - ✅ Sections longues résumées (200 chars)
@@ -391,23 +400,27 @@ utilisateurs sur 40 sites...
 **Vérifications critiques** :
 
 #### ✅ Processus ITIL mentionnés
+
 ```bash
 # Vérifier que les processus ITIL sont dans l'analyse
 cat /app/analysis_result.json | grep -i "ITIL\|processus"
 ```
 
 Doit contenir :
+
 - ✅ "Mise en place de processus ITIL"
 - ✅ "Compétences ITIL"
 - ✅ "respect processus ITIL"
 
 #### ✅ Informations CCAP capturées
+
 ```bash
 # Vérifier les pénalités
 cat /app/analysis_result.json | grep -i "pénalités\|penalties"
 ```
 
 Doit contenir :
+
 - ✅ Pénalités niveaux de service (P1, P2, P3)
 - ✅ Modalités de paiement
 - ✅ Évaluation (Prix 60%, Technique 40%)
@@ -423,6 +436,7 @@ docker exec scorpius-minio mc ls minio/tenders/
 ```
 
 **Résultat attendu** :
+
 ```
 [2025-10-02 09:00:00 UTC]     0B <tender_id>/
 ```
@@ -433,6 +447,7 @@ docker exec scorpius-minio mc ls minio/tenders/<tender_id>/
 ```
 
 **Résultat attendu** :
+
 ```
 [2025-10-02 09:00:00 UTC]  2.3MB CCTP.pdf
 [2025-10-02 09:00:00 UTC]  486KB CCAP.pdf
@@ -458,6 +473,7 @@ EOF
 ```
 
 **Résultat attendu** :
+
 ```
  tender  | documents | total_sections | docs_with_sections
 ---------+-----------+----------------+--------------------
@@ -548,6 +564,7 @@ print(f'Process patterns: {len(process_patterns)}')
 ```
 
 **Résultat attendu** :
+
 ```
 Total patterns: 33
 Process patterns: 7

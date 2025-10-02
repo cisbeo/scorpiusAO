@@ -264,38 +264,53 @@ celery -A app.tasks.celery_app flower --port=5555
 - **🎯 Cache Redis opérationnel (async + sync)**
 - **🎯 Test end-to-end validé sur VSGP-AO**
 
-### ⚠️ Placeholders à compléter
-- ~~Appels réels à Claude API~~ ✅ **FAIT**
-- Génération embeddings OpenAI (structure prête)
-- Recherche similarité vectorielle pgvector (requêtes prêtes)
-- WebSocket notifications temps réel
-- Frontend React/Next.js
+### ⚠️ En cours de développement
 
-### 🎯 Prochaines étapes suggérées
+**🏆 Priorité Critique: Solution 5.5 Adaptive Analysis (12 semaines)**
+- Issues GitHub: [#3](https://github.com/cisbeo/scorpiusAO/issues/3), [#4](https://github.com/cisbeo/scorpiusAO/issues/4)
+- ROI: +€646/AO (81% gain vs manuel), coût moyen $1.67/AO
+
+**Sprint 1-2 (2 semaines) - Solution 5 MVP:**
+- [ ] Executive analysis (2 passes: classification + synthèse thématique)
+- [ ] RAG Service complet (embeddings OpenAI + Q&A endpoint)
+- [ ] Dashboard React (risk scoring, KPI, timeline)
+- [ ] Composant Q&A chat avec références sources
+
+**Sprint 3-4 (2 semaines) - Solution 6 Premium:**
+- [ ] Multi-passes: analyse 377 sections en détail
+- [ ] Cross-analysis: détection contradictions, FAQ pré-calculée
+- [ ] Feature flag "Deep Analysis" avec A/B testing
+
+**Sprint 5-6 (2 semaines) - Solution 5.5 Adaptive:**
+- [ ] Scoring automatique complexité (0-100)
+- [ ] Sélection adaptative du mode (Fast/Selective/Deep)
+- [ ] Machine learning: affiner scoring selon feedback
+
+### 🎯 Prochaines étapes par priorité
 
 1. ~~**Compléter LLM Service**~~ ✅ **FAIT**
    - ~~Implémenter vrais appels Claude API~~ ✅
    - ~~Tester extraction critères~~ ✅
-   - Tester génération contenu (generate_response_section)
 
-2. **Compléter RAG Service**
-   - Implémenter embeddings OpenAI
-   - Tester recherche vectorielle
-   - Optimiser chunking
+2. **Solution 5 MVP (Sprint 1-2)** - EN COURS
+   - Executive analysis avec 2 passes
+   - RAG Service (embeddings + recherche vectorielle)
+   - Dashboard React + Q&A Chat
+   - Tests E2E validation
 
-3. **Ajouter WebSocket**
-   - Notifications temps réel
-   - Progress updates streaming
+3. **Solution 6 Premium (Sprint 3-4)**
+   - Multi-passes complet (377 sections)
+   - Cross-analysis avancé
+   - A/B testing
 
-4. **Développer frontend**
-   - Interface upload documents
-   - Dashboard analyse
-   - Édition de propositions
+4. **Solution 5.5 Adaptive (Sprint 5-6)**
+   - Scoring ML complexité
+   - Mode adaptatif automatique
 
-5. **Tests**
-   - Tests unitaires services
-   - Tests intégration API
-   - Tests end-to-end workflow
+5. **Tests & Production**
+   - Tests unitaires (coverage >80%)
+   - CI/CD GitHub Actions
+   - WebSocket notifications temps réel
 
 ## 📚 Documentation
 

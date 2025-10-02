@@ -40,9 +40,62 @@
 
 ## 🚀 Prochaines Étapes
 
-### 📅 Court Terme (1-2 semaines)
+### 📅 Priorité Immédiate (2-3 semaines) - Solution 5.5 Adaptive Analysis
 
-#### 1. Amélioration Parsing Tableaux
+#### 1. Analyse LLM Améliorée - Solution 5.5 (Adaptive)
+**Priorité**: CRITIQUE | **Effort**: 12 semaines (6 sprints) | **Status**: 📋 Planifié
+**Issues**: [#3](https://github.com/cisbeo/scorpiusAO/issues/3), [#4](https://github.com/cisbeo/scorpiusAO/issues/4)
+
+**Architecture recommandée**: Analyse adaptative selon complexité de l'AO
+
+**Phase 1 - Sprint 1-2 (MVP - Solution 5 Hybrid)**: 2 semaines
+- [ ] Executive analysis (2 passes: classification + synthèse thématique)
+- [ ] Intégration RAG (embeddings + Q&A endpoint)
+- [ ] Dashboard React avec risk scoring, KPI, timeline
+- [ ] Composant chat Q&A avec références sources
+- **Coût**: $0.55/AO + $0.01/question
+- **Temps**: 45 secondes
+- **Précision**: 85-90%
+
+**Phase 2 - Sprint 3-4 (Premium - Solution 6 Multi-Passes)**: 2 semaines
+- [ ] Pass 1: Analyse détaillée de TOUTES les sections (377 sections)
+- [ ] Pass 2: Synthèse thématique enrichie
+- [ ] Pass 3: Cross-analysis (contradictions, dépendances, FAQ pré-calculée)
+- [ ] Feature flag "Deep Analysis" (opt-in)
+- [ ] A/B testing (50% users avec Sol 5, 50% avec Sol 6)
+- **Coût**: $3.76/AO + $0.01/question
+- **Temps**: 3-4 minutes
+- **Précision**: 95-98%
+
+**Phase 3 - Sprint 5-6 (Adaptive - Solution 5.5)**: 2 semaines
+- [ ] Implémentation scoring automatique de complexité (0-100)
+- [ ] Sélection automatique du mode d'analyse:
+  - Complexité < 50: Fast mode (Solution 5) → $0.55
+  - Complexité 50-75: Selective mode (50 sections clés) → $1.50
+  - Complexité > 75: Deep mode (Solution 6) → $3.76
+- [ ] Machine learning: affiner scoring selon feedback utilisateurs
+- [ ] Mode adaptatif par défaut pour tous
+- **Coût moyen**: $1.67/AO (pondéré)
+- **ROI**: +€47 gain marginal vs Solution 5, +81% gain vs manuel
+
+**Critères de complexité détectés**:
+- Nombre de sections (max 30 points)
+- Présence de tableaux (max 20 points)
+- Mots-clés complexité (max 20 points): pénalités, coefficient multiplicateur, exclusion, réversibilité
+- Montant estimé (max 15 points)
+- Durée contrat (max 15 points)
+
+**Valeur ajoutée**:
+- ✅ Détection automatique contradictions entre sections
+- ✅ Graphe de dépendances entre sections
+- ✅ FAQ pré-calculée (20-30 questions)
+- ✅ Confidence scoring par section
+- ✅ 5 niveaux de navigation front (executive → thème → section → Q&A → advanced)
+- ✅ Réutilisation analyses pour futurs AO similaires
+
+---
+
+#### 2. Amélioration Parsing Tableaux
 **Priorité**: HAUTE | **Effort**: 1-2 semaines | **Status**: 📋 Documenté
 
 **3 Solutions Complémentaires**:
@@ -52,24 +105,26 @@
 
 ---
 
-#### 2. Compléter RAG Service
-**Priorité**: HAUTE | **Effort**: 2-3 jours | **Status**: ⚠️ À finaliser
+#### 3. Compléter RAG Service (Intégré dans Solution 5.5)
+**Priorité**: CRITIQUE | **Effort**: 2-3 jours | **Status**: ⚠️ Sprint 1-2
 
 **Tâches**:
-- Implémenter embeddings OpenAI réels
+- Implémenter embeddings OpenAI réels (text-embedding-3-small)
 - Tester recherche vectorielle pgvector
 - Valider chunking strategy (recall@5 > 80%)
+- API endpoint `/tenders/{id}/ask` avec RAG
+- Cache questions fréquentes (Redis)
 
 ---
 
-#### 3. WebSocket Notifications
+#### 4. WebSocket Notifications
 **Priorité**: MOYENNE | **Effort**: 2 jours | **Status**: ⏳ Non démarré
 
 Progress updates temps réel via WebSocket + Redis Pub/Sub
 
 ---
 
-#### 4. Tests Unitaires Complets
+#### 5. Tests Unitaires Complets
 **Priorité**: HAUTE | **Effort**: 3-4 jours | **Status**: ⏳ À compléter
 
 Coverage > 80% + CI/CD GitHub Actions
@@ -125,15 +180,36 @@ Coverage > 80% + CI/CD GitHub Actions
 | Phase | Durée | Priorité | Status |
 |-------|-------|----------|--------|
 | Phase 1 - MVP Backend | ✅ 3 semaines | HAUTE | ✅ DONE |
-| Court terme | 2 semaines | HAUTE | 🚧 EN COURS |
+| **Solution 5.5 Adaptive (Sprint 1-6)** | **12 semaines** | **CRITIQUE** | 📋 Planifié |
+| ├─ Sprint 1-2: Solution 5 (MVP) | 2 semaines | CRITIQUE | ⏳ À démarrer |
+| ├─ Sprint 3-4: Solution 6 (Premium) | 2 semaines | CRITIQUE | ⏳ Planifié |
+| └─ Sprint 5-6: Adaptive (ML) | 2 semaines | CRITIQUE | ⏳ Planifié |
+| Court terme (Parsing + Tests) | 2 semaines | HAUTE | 🚧 EN COURS |
 | Moyen terme | 1 mois | HAUTE | ⏳ Planifié |
 | Long terme | 3 mois | MOYENNE | ⏳ Planifié |
 
-**Total estimé**: ~4.5 mois ETP
+**Total estimé avec Solution 5.5**: ~7 mois ETP
 
 ---
 
 ## 🎯 Critères de Succès
+
+### Solution 5.5 Adaptive (Priorité Critique)
+- [ ] **Sprint 1-2**: Solution 5 fonctionnelle
+  - Executive analysis en <45 sec
+  - RAG Q&A en <2 sec
+  - Dashboard React avec risk scoring
+  - Chat avec références sources
+- [ ] **Sprint 3-4**: Solution 6 fonctionnelle
+  - Analyse 377 sections en 3-4 min
+  - Détection contradictions automatique
+  - FAQ pré-calculée (20-30 questions)
+  - A/B testing validé
+- [ ] **Sprint 5-6**: Solution 5.5 en production
+  - Scoring complexité précision >85%
+  - Coût moyen <$2/AO
+  - ROI >€600/AO
+  - Satisfaction utilisateur >90%
 
 ### Court Terme
 - [ ] Parsing tableaux: qualité > 85%
@@ -157,12 +233,19 @@ Coverage > 80% + CI/CD GitHub Actions
 
 ## 🚀 Quick Wins Immédiats
 
-1. **Parsing Tableaux Phase 1** (4h) → +20% qualité
-2. **RAG Service** (3j) → Débloque suggestions
+### Priorité Absolue (Sprint 1-2)
+1. **Solution 5 MVP** (2 semaines) → Analyse adaptative opérationnelle
+   - Executive analysis avec 2 passes
+   - RAG Service complet (embeddings + Q&A)
+   - Dashboard React basique
+   - ROI: +€599/AO vs manuel
+
+### Court Terme
+2. **Parsing Tableaux Phase 1** (4h) → +20% qualité
 3. **Tests Unitaires** (2j) → Confiance déploiement
 4. **WebSocket** (2j) → Meilleure UX
 
-**Total**: ~12 jours → MVP utilisable end-to-end
+**Total Sprint 1-2**: 2 semaines → Solution 5 MVP utilisable en production
 
 ---
 
@@ -176,10 +259,18 @@ Coverage > 80% + CI/CD GitHub Actions
 
 ### Budget Mensuel (Production)
 - Infrastructure: $200-500
-- Claude API: $300-500
-- OpenAI Embeddings: $50-100
+- **Claude API**: $300-800 (avec Solution 5.5 adaptive)
+  - 50 AO/mois × $1.67 moyen = ~$83.50
+  - 500 questions RAG/mois × $0.01 = ~$5
+  - Marge sécurité + autres usages
+- **OpenAI Embeddings**: $50-100
 - SaaS: $100-150
-- **Total**: ~$650-1,250/mois
+- **Total**: ~$650-1,550/mois
+
+**ROI estimé** (50 AO/mois):
+- Coût outil: ~$650/mois
+- Gain temps bid managers: 50 AO × €599 = **€29,950/mois**
+- **ROI net**: **€29,300/mois** (45× le coût)
 
 ---
 

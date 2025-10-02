@@ -81,6 +81,24 @@ ScorpiusAO est une application IA pour bid managers répondant aux appels d'offr
 
 ## 🚧 Travaux en Cours
 
+### 🏆 Priorité Critique: Solution 5.5 Adaptive Analysis
+
+**Status**: 📋 Planifié - 12 semaines (6 sprints)
+**Issues GitHub**: [#3](https://github.com/cisbeo/scorpiusAO/issues/3), [#4](https://github.com/cisbeo/scorpiusAO/issues/4)
+**Impact**: ROI +€646/AO (81% gain vs manuel), coût moyen $1.67/AO
+
+**Architecture**: Analyse adaptative selon complexité de l'AO
+- **Fast mode** (complexité <50): $0.55, 45s, précision 85-90%
+- **Selective mode** (50-75): $1.50, 90s, précision 90-93%
+- **Deep mode** (>75): $3.76, 3-4min, précision 95-98%
+
+**Planning**:
+- **Sprint 1-2** (2 sem): Solution 5 MVP (executive + RAG)
+- **Sprint 3-4** (2 sem): Solution 6 Premium (multi-passes complet)
+- **Sprint 5-6** (2 sem): Solution 5.5 Adaptive (scoring ML)
+
+---
+
 ### Issue #1: Amélioration Parsing Tableaux
 **Status**: 📋 Documenté, prêt à implémenter
 **Effort**: 1-2 semaines
@@ -95,31 +113,47 @@ ScorpiusAO est une application IA pour bid managers répondant aux appels d'offr
 
 ---
 
-## 🔜 Priorités Immédiates (2 semaines)
+## 🔜 Priorités Immédiates - Sprint 1-2 (2 semaines)
 
-### 1. Parsing Tableaux
+### 1. Solution 5 MVP - Hybrid Analysis (CRITIQUE)
+- [ ] **Backend: Executive Analysis**
+  - [ ] Pass 1: Classification sections par type
+  - [ ] Pass 2: Synthèse thématique (8 thèmes)
+  - [ ] Risk scoring (0-100)
+  - [ ] Prompts spécialisés (service_levels, technical, deadlines, penalties)
+- [ ] **Backend: RAG Service**
+  - [ ] Appels OpenAI embeddings réels (text-embedding-3-small)
+  - [ ] Tests recherche vectorielle pgvector (recall@5 > 80%)
+  - [ ] API endpoint `/tenders/{id}/ask` avec RAG
+  - [ ] Cache questions fréquentes (Redis)
+- [ ] **Frontend: Dashboard Executive**
+  - [ ] Setup Next.js 14
+  - [ ] Risk score card (0-100 avec breakdown)
+  - [ ] KPI summary table (drill-down)
+  - [ ] Timeline Gantt (deadlines)
+  - [ ] Thematic cards (service levels, technical, penalties)
+- [ ] **Frontend: Q&A Chat**
+  - [ ] Composant chat avec streaming (Server-Sent Events)
+  - [ ] Affichage sources cliquables (PDF + page)
+  - [ ] Suggestions questions pré-calculées
+- [ ] **Tests E2E**
+  - [ ] Validation workflow complet
+  - [ ] ROI measurement (temps bid manager)
+
+### 2. Parsing Tableaux (Parallèle)
 - [ ] Implémenter Phase 1 (enrichissement prompt)
-- [ ] Implémenter Phase 2 (post-processing)
 - [ ] Tests automatisés
 - [ ] Validation qualité (>85%)
-
-### 2. RAG Service
-- [ ] Appels OpenAI embeddings réels
-- [ ] Tests recherche vectorielle pgvector
-- [ ] Validation chunking (recall@5 > 80%)
-- [ ] Documentation API
 
 ### 3. Tests Unitaires
 - [ ] Tests services (storage, parser, llm, rag)
 - [ ] Tests API endpoints
 - [ ] Coverage > 80%
-- [ ] CI/CD GitHub Actions
 
-### 4. WebSocket Notifications
+### 4. WebSocket Notifications (Optionnel)
 - [ ] Endpoint WebSocket FastAPI
 - [ ] Redis Pub/Sub broadcast
 - [ ] Intégration pipeline Celery
-- [ ] Tests latence (<100ms)
 
 ---
 
@@ -182,5 +216,6 @@ ScorpiusAO est une application IA pour bid managers répondant aux appels d'offr
 
 ---
 
-**Dernière mise à jour**: 2 octobre 2025, 15h30
+**Dernière mise à jour**: 2 octobre 2025, 21h30
 **Responsable**: Team ScorpiusAO
+**Version**: 0.2.0 → 0.3.0 (Solution 5.5 Adaptive planifiée)

@@ -2308,15 +2308,40 @@ def adaptive_chunk(text: str, document_type: str):
 ---
 
 #### Analyse Claude API
+
+**Architecture actuelle (v0.2.0)**:
 | Opération | Temps (P50) | Temps (P95) | Coût (10k chars) |
 |-----------|-------------|-------------|------------------|
-| `analyze_tender` | 60s | 120s | $1-2 |
+| `analyze_tender` (actuel) | 60s | 120s | $1-2 |
 | `extract_criteria` | 20s | 40s | $0.3-0.5 |
+
+**Nouvelle architecture Solution 5.5 Adaptive (planifié)**:
+
+| Mode | Complexité AO | Temps | Coût/AO | Précision | Use Case |
+|------|---------------|-------|---------|-----------|----------|
+| **Fast** (Sol 5) | < 50/100 | 45s | $0.55 | 85-90% | AO simples (<100 pages) |
+| **Selective** | 50-75/100 | 90s | $1.50 | 90-93% | AO moyennes (100-200 pages) |
+| **Deep** (Sol 6) | > 75/100 | 3-4 min | $3.76 | 95-98% | AO complexes (>200 pages, pénalités) |
+
+**Sélection automatique du mode** basée sur scoring complexité (0-100):
+- Nombre de sections (max 30 pts)
+- Présence de tableaux (max 20 pts)
+- Mots-clés complexité (max 20 pts): pénalités, coefficient multiplicateur, exclusion
+- Montant estimé (max 15 pts)
+- Durée contrat (max 15 pts)
+
+**Coût moyen pondéré** (estimation): $1.67/AO
+- 20% AO complexes → Deep mode ($3.76)
+- 50% AO moyennes → Selective ($1.50)
+- 30% AO simples → Fast mode ($0.55)
+
+**ROI par AO**: +€646 gain temps bid manager vs manuel (81% gain)
 
 **Facteurs**:
 - Taille input: Linéaire jusqu'à 100k tokens
 - Complexité: Documents structurés vs. texte dense
 - Cache: Hit = < 1s (économie 98%)
+- Deep mode: 377 sections analysées en parallèle (batch 20)
 
 ---
 
@@ -2499,18 +2524,24 @@ docker-compose exec api alembic upgrade head
 
 ### ⚠️ Partiellement implémenté (20%)
 
-#### RAG Service
+#### RAG Service (Priorité Sprint 1-2)
 - [x] Structure classes
 - [x] Méthodes chunking
 - [x] Requêtes pgvector prêtes
-- [ ] Appels OpenAI embeddings (placeholder)
-- [ ] Recherche similarité testée
-- [ ] Reranking implémenté
+- [ ] **Appels OpenAI embeddings (text-embedding-3-small)** - Sprint 1
+- [ ] **Recherche similarité testée (recall@5 > 80%)** - Sprint 1
+- [ ] **API endpoint `/tenders/{id}/ask` avec RAG** - Sprint 2
+- [ ] **Cache questions fréquentes (Redis)** - Sprint 2
+- [ ] Reranking implémenté - Sprint 3-4
 
-#### Pipeline Celery
-- [ ] Étape 2: Création embeddings
-- [ ] Étape 5: Recherche similarité
-- [ ] Étape 6: Génération suggestions
+#### Pipeline Celery (Intégré Solution 5.5)
+- [ ] **Étape 2: Création embeddings** - Sprint 1
+- [ ] **Pass 1: Executive analysis (classification sections)** - Sprint 1
+- [ ] **Pass 2: Synthèse thématique** - Sprint 1
+- [ ] **Pass 3: Cross-analysis + FAQ (Deep mode only)** - Sprint 3-4
+- [ ] **Scoring complexité automatique** - Sprint 5-6
+- [ ] Étape 5: Recherche similarité - Sprint 3-4
+- [ ] Étape 6: Génération suggestions - Sprint 3-4
 
 #### Sécurité
 - [x] Structure JWT prête
@@ -2530,12 +2561,19 @@ docker-compose exec api alembic upgrade head
 
 ### ❌ Non commencé (10%)
 
-#### Frontend
-- [ ] Application Next.js
-- [ ] Dashboard tenders
-- [ ] Interface upload
-- [ ] Vue analyse
-- [ ] Éditeur réponses
+#### Frontend (Priorité Sprint 1-2)
+- [ ] **Application Next.js 14 setup** - Sprint 1
+- [ ] **Dashboard Executive Analysis** - Sprint 1-2
+  - [ ] Risk score card (0-100)
+  - [ ] KPI summary table avec drill-down
+  - [ ] Timeline Gantt (deadlines)
+  - [ ] Thematic cards (service levels, technical, penalties)
+- [ ] **Composant Q&A Chat** - Sprint 2
+  - [ ] Streaming réponses (Server-Sent Events)
+  - [ ] Affichage sources cliquables (PDF + page)
+  - [ ] Suggestions questions pré-calculées
+- [ ] Interface upload - Sprint 3
+- [ ] Éditeur réponses - Sprint 4-5
 
 #### Intégrations externes
 - [ ] Scraper BOAMP
