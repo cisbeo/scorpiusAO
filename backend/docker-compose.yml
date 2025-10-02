@@ -131,6 +131,7 @@ services:
       - MINIO_SECRET_KEY=minioadmin
     volumes:
       - ./app:/app/app
+      - ../scripts:/app/scripts:ro
     depends_on:
       postgres:
         condition: service_healthy

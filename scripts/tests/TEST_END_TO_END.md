@@ -110,7 +110,7 @@ docker exec scorpius-celery-worker ls -lh /app/real_pdfs/
 
 ```bash
 # Exécuter le script de test E2E
-docker exec scorpius-celery-worker python3 /app/backend/test_fresh_e2e.py
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_fresh_e2e.py
 ```
 
 **OU créer manuellement** :
@@ -303,7 +303,7 @@ EOF
 **Objectif** : Vérifier l'optimisation de structure pour le LLM.
 
 ```bash
-docker exec scorpius-celery-worker python3 /app/backend/test_hierarchical_analysis.py
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_hierarchical_analysis.py
 ```
 
 **Résultats attendus** :
@@ -337,7 +337,7 @@ RÉDUCTION:            25,724 (-21%)   6,431 (-21%)   $0.0193 (-21%)
 **Objectif** : Générer l'analyse complète du tender avec Claude API.
 
 ```bash
-docker exec scorpius-celery-worker python3 /app/backend/test_llm_analysis.py
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_llm_analysis.py
 ```
 
 **Résultats attendus** :
@@ -630,11 +630,11 @@ docker cp Examples/VSGP-AO/RC.pdf scorpius-celery-worker:/app/real_pdfs/
 
 # 3. Exécuter test E2E
 echo "🔄 Traitement des documents..."
-docker exec scorpius-celery-worker python3 /app/backend/test_fresh_e2e.py
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_fresh_e2e.py
 
 # 4. Exécuter analyse LLM
 echo "🤖 Analyse LLM..."
-docker exec scorpius-celery-worker python3 /app/backend/test_llm_analysis.py
+docker exec scorpius-celery-worker python3 /app/scripts/tests/test_llm_analysis.py
 
 # 5. Vérifications
 echo "✅ Vérifications finales..."

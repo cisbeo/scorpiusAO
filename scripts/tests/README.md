@@ -221,19 +221,19 @@ docker exec scorpius-postgres psql -U scorpius -d scorpius_db -c \
 
 ## 📝 Utilisation dans le Conteneur Docker
 
-**Important** : Les scripts doivent être copiés dans le conteneur pour être exécutés.
+**Important** : Les scripts sont montés automatiquement dans le conteneur via un volume Docker.
 
-### Option 1 : Copie manuelle (développement)
-```bash
-docker cp scripts/tests/test_fresh_e2e.py scorpius-celery-worker:/app/scripts/tests/
-```
+### Configuration Docker (déjà en place)
 
-### Option 2 : Volume Docker (recommandé)
-Ajouter dans `docker-compose.yml` :
+Le fichier `docker-compose.yml` monte le répertoire `scripts/` :
 ```yaml
-volumes:
-  - ./scripts:/app/scripts:ro
+celery-worker:
+  volumes:
+    - ./app:/app/app
+    - ../scripts:/app/scripts:ro  # Lecture seule
 ```
+
+Les scripts sont donc **directement accessibles** sans copie manuelle, et toute modification locale est immédiatement disponible dans le conteneur.
 
 ---
 
