@@ -20,6 +20,9 @@ from app.models.kb_tag import KBTag
 from app.models.kb_relationship import KBRelationship
 from app.models.kb_usage_log import KBUsageLog
 
+# BOAMP integration
+from app.models.boamp_publication import BOAMPPublication
+
 __all__ = [
     "Base",
     "Tender",
@@ -39,4 +42,6 @@ __all__ = [
     "KBTag",
     "KBRelationship",
     "KBUsageLog",
+    # BOAMP
+    "BOAMPPublication",
 ]
