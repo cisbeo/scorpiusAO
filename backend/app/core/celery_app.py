@@ -15,6 +15,7 @@ from app.models.document import DocumentEmbedding
 from app.models.similar_tender import SimilarTender
 from app.models.criterion_suggestion import CriterionSuggestion
 from app.models.boamp_publication import BOAMPPublication
+from app.models.aws_place_publication import AWSPlacePublication
 
 # Create Celery app
 celery_app = Celery(
@@ -23,7 +24,8 @@ celery_app = Celery(
     backend=settings.celery_result_backend,
     include=[
         "app.tasks.tender_tasks",
-        "app.tasks.boamp_tasks"
+        "app.tasks.boamp_tasks",
+        "app.tasks.aws_place_tasks"
     ]
 )
 
@@ -52,12 +54,24 @@ celery_app.conf.beat_schedule = {
     "fetch-boamp-hourly": {
         "task": "app.tasks.boamp_tasks.fetch_boamp_publications_task",
         "schedule": crontab(minute=0),  # Every hour at :00
-        "kwargs": {"days_back": 1, "limit": 100},
+        "kwargs": {"days_back": 90, "limit": 500},  # Extended to 90 days, 500 publications
     },
     # Cleanup old BOAMP publications weekly (Sunday at 3 AM)
     "cleanup-boamp-weekly": {
         "task": "app.tasks.boamp_tasks.cleanup_old_boamp_publications_task",
         "schedule": crontab(hour=3, minute=0, day_of_week=0),  # Sunday 3 AM
         "kwargs": {"days_to_keep": 90},
+    },
+    # Fetch AWS PLACE consultations every 4 hours
+    "fetch-aws-place-4hourly": {
+        "task": "app.tasks.aws_place_tasks.fetch_aws_place_consultations_task",
+        "schedule": crontab(minute=0, hour="*/4"),  # Every 4 hours
+        "kwargs": {"days_back": 30, "limit": 200, "min_amount": 50000},  # 50K€ minimum
+    },
+    # Cleanup old AWS PLACE publications weekly (Sunday at 4 AM)
+    "cleanup-aws-place-weekly": {
+        "task": "app.tasks.aws_place_tasks.cleanup_old_aws_place_publications_task",
+        "schedule": crontab(hour=4, minute=0, day_of_week=0),  # Sunday 4 AM
+        "kwargs": {"days_to_keep": 180},  # Keep 6 months for higher-value contracts
     },
 }
