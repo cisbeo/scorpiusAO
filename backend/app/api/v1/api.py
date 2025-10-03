@@ -10,7 +10,8 @@ from app.api.v1.endpoints import (
     proposals,
     search,
     tender_documents,
-    tender_analysis
+    tender_analysis,
+    archive
 )
 
 api_router = APIRouter()
@@ -56,4 +57,10 @@ api_router.include_router(
     search.router,
     prefix="/search",
     tags=["search"]
+)
+
+api_router.include_router(
+    archive.router,
+    prefix="/archive",
+    tags=["archive"]
 )

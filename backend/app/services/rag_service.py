@@ -1,7 +1,7 @@
 """
 RAG Service for semantic search using pgvector.
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from uuid import UUID
 from openai import OpenAI, AsyncOpenAI
 from sqlalchemy import select, text
@@ -609,6 +609,105 @@ class RAGService:
             }
             for row in rows
         ]
+
+    def ingest_all_past_proposals_sync(
+        self,
+        db: Session,
+        batch_size: int = 10,
+        status_filter: Optional[str] = "won"
+    ) -> Dict[str, Any]:
+        """
+        Batch ingest all past proposals for RAG Knowledge Base.
+
+        Args:
+            db: Database session
+            batch_size: Number of proposals to process per batch (not used currently)
+            status_filter: Filter by status ('won', 'lost', 'all')
+
+        Returns:
+            Dict with total_proposals, total_embeddings, errors
+        """
+        from app.models.past_proposal import PastProposal
+        from app.models.historical_tender import HistoricalTender
+
+        # Query past proposals
+        query = db.query(PastProposal).join(HistoricalTender)
+
+        if status_filter and status_filter != "all":
+            query = query.filter(PastProposal.status == status_filter)
+
+        past_proposals = query.all()
+
+        total_proposals = len(past_proposals)
+        total_embeddings = 0
+        errors = []
+
+        print(f"\n🚀 Starting batch ingestion of {total_proposals} past proposals...")
+
+        for i, proposal in enumerate(past_proposals, 1):
+            try:
+                print(f"\n[{i}/{total_proposals}] Processing PastProposal {proposal.id}...")
+
+                # Convert sections to list format
+                sections_list = []
+                for section_num, section_data in proposal.sections.items():
+                    sections_list.append({
+                        "section_number": section_num,
+                        "title": section_data.get("title", ""),
+                        "content": section_data.get("content", ""),
+                        "page": section_data.get("page", 1),
+                        "is_key_section": True,
+                        "is_toc": False,
+                        "level": section_data.get("level", 1)
+                    })
+
+                # Chunk sections
+                chunks = self.chunk_sections_semantic(
+                    sections=sections_list,
+                    max_tokens=1000,
+                    min_tokens=100
+                )
+
+                # Get tender metadata
+                tender = proposal.historical_tender
+
+                # Ingest
+                embeddings_count = self.ingest_document_sync(
+                    db=db,
+                    document_id=str(proposal.id),
+                    chunks=chunks,
+                    document_type="past_proposal",
+                    metadata={
+                        "historical_tender_id": str(tender.id),
+                        "tender_title": tender.title,
+                        "organization": tender.organization,
+                        "reference_number": tender.reference_number,
+                        "status": proposal.status,
+                        "score": float(proposal.score_obtained) if proposal.score_obtained else None,
+                        "rank": proposal.rank,
+                        "win_factors": proposal.win_factors,
+                        "is_winning": proposal.is_winning_proposal
+                    }
+                )
+
+                total_embeddings += embeddings_count
+                print(f"   ✅ Created {embeddings_count} embeddings")
+
+            except Exception as e:
+                error_msg = f"Failed to ingest PastProposal {proposal.id}: {str(e)}"
+                errors.append(error_msg)
+                print(f"   ❌ {error_msg}")
+
+        print(f"\n✅ Batch ingestion complete:")
+        print(f"   Total proposals: {total_proposals}")
+        print(f"   Total embeddings: {total_embeddings}")
+        print(f"   Errors: {len(errors)}")
+
+        return {
+            "total_proposals": total_proposals,
+            "total_embeddings": total_embeddings,
+            "errors": errors
+        }
 
 
 # Global instance

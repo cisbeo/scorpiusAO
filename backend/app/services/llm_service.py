@@ -132,24 +132,81 @@ class LLMService:
         self,
         section_type: str,
         requirements: Dict[str, Any],
-        company_context: Dict[str, Any] | None = None
+        company_context: Dict[str, Any] | None = None,
+        db: Any = None,
+        use_knowledge_base: bool = True,
+        kb_top_k: int = 3
     ) -> str:
         """
-        Generate a response section for tender.
+        Generate a response section for tender with optional Knowledge Base enrichment.
 
         Args:
             section_type: Type of section (company_presentation, methodology, etc.)
             requirements: Requirements from tender
             company_context: Company information and past projects
+            db: Database session (for RAG retrieval)
+            use_knowledge_base: If True, retrieve similar past proposals from KB
+            kb_top_k: Number of KB results to include in context
 
         Returns:
             Generated section content
         """
-        prompt = RESPONSE_GENERATION_PROMPT.format(
-            section_type=section_type,
-            requirements=json.dumps(requirements, indent=2, ensure_ascii=False),
-            company_context=json.dumps(company_context or {}, indent=2, ensure_ascii=False)
-        )
+        # Build base prompt
+        prompt_parts = [
+            f"# Section à générer: {section_type}\n",
+            f"## Exigences:\n{json.dumps(requirements, indent=2, ensure_ascii=False)}\n"
+        ]
+
+        if company_context:
+            prompt_parts.append(f"## Contexte entreprise:\n{json.dumps(company_context, indent=2, ensure_ascii=False)}\n")
+
+        # NEW: Retrieve similar sections from Knowledge Base
+        if use_knowledge_base and db:
+            try:
+                from app.services.rag_service import rag_service
+
+                # Query: Combine section type + requirements
+                kb_query = f"{section_type}\n{json.dumps(requirements, ensure_ascii=False)}"
+
+                # Retrieve from past_proposals (only winning ones)
+                kb_results = rag_service.retrieve_relevant_content_sync(
+                    db=db,
+                    query=kb_query,
+                    top_k=kb_top_k,
+                    document_type="past_proposal",
+                    metadata_filter={"status": "won"}
+                )
+
+                if kb_results:
+                    prompt_parts.append("\n## 📚 Exemples de réponses gagnantes (appels d'offres passés):\n\n")
+
+                    for i, result in enumerate(kb_results, 1):
+                        metadata = result.get("metadata", {})
+                        score = metadata.get("score", "N/A")
+                        tender_title = metadata.get("tender_title", "N/A")
+
+                        prompt_parts.append(f"### Exemple {i} (Score: {score}/100 - {tender_title}):\n")
+                        prompt_parts.append(f"{result['content']}\n\n")
+
+                    print(f"📚 Retrieved {len(kb_results)} examples from Knowledge Base")
+
+            except Exception as e:
+                print(f"⚠️  Failed to retrieve Knowledge Base context: {e}")
+                # Continue without KB if it fails
+
+        # Add generation instruction
+        prompt_parts.append("""
+## Instructions de génération:
+- Rédigez une réponse complète et professionnelle pour cette section
+- Si des exemples sont fournis, adaptez-les au contexte spécifique de cet appel d'offres
+- Utilisez un ton formel et confiant
+- Intégrez des éléments techniques concrets
+- Longueur: 300-500 mots
+
+Générez la réponse:
+""")
+
+        prompt = "\n".join(prompt_parts)
 
         print(f"🤖 Calling Claude API for {section_type} section generation...")
 

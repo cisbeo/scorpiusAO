@@ -89,10 +89,23 @@ Semantic search with dual usage: Q&A on tenders + Knowledge Base retrieval
 - **Endpoint**: `POST /tenders/{id}/ask` with Redis cache (1h TTL)
 - **Performance**: Recall@5: 100%, Cost: $0.016/tender, Response: <100ms (cached)
 
-**Knowledge Base** (Planned - Sprint 2):
-- Embeddings for `past_proposals`, `case_studies`, `certifications`
-- Used for Response Generation with company context
-- Reusable sections from winning proposals
+**Knowledge Base** (✅ Implemented - 3 oct 2025):
+- `ingest_all_past_proposals_sync()`: Batch ingestion of past proposals
+- Embeddings for `past_proposals` (status: won/lost/all)
+- Archive Service: `archive_tender()` pour migration Tender → HistoricalTender
+- Endpoint: `POST /archive/tenders/{id}/archive`
+- Used for Response Generation with company context (LLM Service enrichi)
+- Metadata: `historical_tender_id`, `status`, `score`, `win_factors`, `is_winning`
+- Script CLI: `scripts/ingest_past_proposals.py --status won`
+- See: [Issue #2 - Implementation Complete](https://github.com/cisbeo/scorpiusAO/issues/2)
+
+#### Archive Service (`archive_service.py`)
+Tender archiving and Knowledge Base management (✅ Implemented - 3 oct 2025):
+- `archive_tender()`: Migrate Tender + Proposal → HistoricalTender + PastProposal
+- Automatic RAG embeddings creation
+- Post-mortem metadata: `lessons_learned`, `win_factors`, `score_obtained`, `rank`
+- Optional original deletion after archiving
+- Integration with RAG Service for Knowledge Base enrichment
 
 #### Parser Service (`parser_service.py`)
 Multi-format document extraction:
@@ -164,6 +177,48 @@ CREATE TABLE tender_criteria (
     weight FLOAT,
     is_mandatory BOOLEAN DEFAULT false,
     metadata JSONB
+);
+
+-- Historical Tenders (✅ NEW - 3 oct 2025)
+CREATE TABLE historical_tenders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(500) NOT NULL,
+    organization VARCHAR(200),
+    reference_number VARCHAR(100) UNIQUE,
+    publication_date DATE,
+    deadline DATE,
+    award_date DATE,
+    total_amount NUMERIC(12,2),
+    winner_company VARCHAR(200),
+    status VARCHAR(50) DEFAULT 'awarded',
+    archived_at TIMESTAMP,
+    archived_by UUID,
+    meta_data JSON,  -- Stores original_tender_id, raw_content, etc.
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Past Proposals (✅ NEW - 3 oct 2025)
+CREATE TABLE past_proposals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    historical_tender_id UUID REFERENCES historical_tenders(id) ON DELETE CASCADE,
+    our_company_id UUID NOT NULL,
+    our_company_name VARCHAR(200),
+    status VARCHAR(50) NOT NULL,  -- won, lost, shortlisted
+    score_obtained NUMERIC(5,2),
+    max_score NUMERIC(5,2) DEFAULT 100.00,
+    rank INTEGER,
+    total_bidders INTEGER,
+    sections JSON NOT NULL,
+    lessons_learned TEXT,
+    win_factors TEXT[],
+    improvement_areas TEXT[],
+    proposed_amount NUMERIC(12,2),
+    winning_amount NUMERIC(12,2),
+    meta_data JSON,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(historical_tender_id, our_company_id)
 );
 ```
 

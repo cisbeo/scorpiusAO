@@ -8,6 +8,10 @@ from app.models.document_section import DocumentSection
 from app.models.tender_analysis import TenderAnalysis
 from app.models.similar_tender import SimilarTender
 
+# Historical models for RAG Knowledge Base
+from app.models.historical_tender import HistoricalTender
+from app.models.past_proposal import PastProposal
+
 __all__ = [
     "Base",
     "Tender",
@@ -16,4 +20,7 @@ __all__ = [
     "DocumentSection",
     "TenderAnalysis",
     "SimilarTender",
+    # Historical models
+    "HistoricalTender",
+    "PastProposal",
 ]

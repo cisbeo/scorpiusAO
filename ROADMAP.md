@@ -130,7 +130,14 @@
 
 **Prochaines étapes** (Sprint 2):
 - [ ] FAQ pré-calculée (20-30 questions auto-générées)
-- [ ] Intégration Knowledge Base (`past_proposals`, `case_studies`)
+- [x] **Intégration Knowledge Base (`past_proposals`, `historical_tenders`)** ✅ (3 oct 2025)
+  - ✅ Modèles SQLAlchemy créés
+  - ✅ Migration Alembic appliquée
+  - ✅ Archive Service + endpoint API
+  - ✅ RAG batch ingestion
+  - ✅ LLM Service enrichi avec KB
+  - Voir: [Issue #2 - RÉSOLU](https://github.com/cisbeo/scorpiusAO/issues/2)
+- [ ] Intégration `case_studies` et `certifications` (optionnel)
 - [ ] Composant frontend Chat Q&A
 - [ ] Re-ranking avec Cohere/Voyage (optionnel)
 
