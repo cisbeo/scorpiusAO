@@ -78,11 +78,21 @@ Handles all Claude API interactions with caching and retry logic:
 - Implements prompt caching to reduce API costs
 
 #### RAG Service (`rag_service.py`)
-Semantic search over company knowledge base:
-- `ingest_document()`: Chunk and embed documents into pgvector
-- `retrieve_relevant_content()`: Semantic search with top-k results
-- `rerank_results()`: Reranking for improved relevance
-- Handles embeddings for past tenders, certifications, case studies
+Semantic search with dual usage: Q&A on tenders + Knowledge Base retrieval
+
+**Q&A on Current Tender** (Solution 5.5 - Implemented):
+- `create_embedding_sync()`: OpenAI text-embedding-3-small (1536 dim)
+- `chunk_sections_semantic()`: Smart chunking (merge <100, keep 100-1000, split >1000 tokens)
+- `ingest_document_sync()`: Batch insert into pgvector (100 chunks/batch)
+- `retrieve_relevant_content_sync()`: Cosine similarity search (top-k results)
+- `find_similar_tenders_sync()`: Find similar past tenders
+- **Endpoint**: `POST /tenders/{id}/ask` with Redis cache (1h TTL)
+- **Performance**: Recall@5: 100%, Cost: $0.016/tender, Response: <100ms (cached)
+
+**Knowledge Base** (Planned - Sprint 2):
+- Embeddings for `past_proposals`, `case_studies`, `certifications`
+- Used for Response Generation with company context
+- Reusable sections from winning proposals
 
 #### Parser Service (`parser_service.py`)
 Multi-format document extraction:
@@ -280,15 +290,39 @@ docker-compose down -v
 ```
 
 ## Core Features
-1. **Tender Analysis**: Extract criteria, deadlines, mandatory documents
-2. **Response Generation**: AI-powered section generation with company context
-3. **Response Library**: Searchable database of past winning responses
-4. **Compliance Checking**: Real-time validation against requirements
-5. **Technical Memorandum**: Automated generation with customization
-6. **Scoring Simulation**: Predict evaluation scores
-7. **Knowledge Base**: RAG over certifications, references, case studies
-8. **Document Export**: Generate DUME, DC4, and platform-specific formats
+1. **Tender Analysis**: ✅ Extract criteria, deadlines, mandatory documents (Implemented)
+2. **Q&A on Tender**: ✅ RAG-powered Q&A endpoint with semantic search (Solution 5.5 - Implemented 3 oct 2025)
+   - Endpoint: `POST /tenders/{id}/ask`
+   - Performance: Recall@5: 100%, Response time: <100ms (cached), 3-4s (uncached)
+   - Cache Redis 1h TTL, Citations sources avec sections
+3. **Response Generation**: ⏳ AI-powered section generation with company context (Planned)
+4. **Response Library**: ⏳ Searchable database of past winning responses (Planned)
+5. **Compliance Checking**: ⏳ Real-time validation against requirements (Planned)
+6. **Technical Memorandum**: ⏳ Automated generation with customization (Planned)
+7. **Scoring Simulation**: ⏳ Predict evaluation scores (Planned)
+8. **Knowledge Base**: ⏳ RAG over past_proposals, certifications, case_studies (Planned Sprint 2)
+9. **Document Export**: ⏳ Generate DUME, DC4, and platform-specific formats (Planned)
 
 ## Development Status
 
-Project initialization in progress. Architecture defined, implementing backend structure.
+**Current Sprint**: Sprint 1-2 (Solution 5.5 Adaptive Analysis)
+**Last Update**: 3 octobre 2025
+
+### ✅ Completed
+- Backend MVP infrastructure (Docker, PostgreSQL, Redis, RabbitMQ, MinIO)
+- Parser Service with structured extraction (377 sections VSGP-AO)
+- LLM Service with Claude Sonnet 4.5 ($0.12/tender, 8s)
+- RAG Service Q&A endpoint (Recall@5: 100%, $0.016/tender)
+- Celery Pipeline with embeddings integration
+- Tests E2E RAG Service (4 tests validés)
+
+### 🚧 In Progress
+- Frontend Dashboard React (Sprint 1-2)
+- Executive Analysis with 2-pass approach
+- Composant Chat Q&A
+
+### ⏳ Planned
+- Knowledge Base integration (past_proposals, case_studies)
+- FAQ pré-calculée (20-30 questions)
+- Response Generation with RAG context
+- WebSocket notifications

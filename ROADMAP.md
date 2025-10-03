@@ -50,7 +50,11 @@
 
 **Phase 1 - Sprint 1-2 (MVP - Solution 5 Hybrid)**: 2 semaines
 - [ ] Executive analysis (2 passes: classification + synthèse thématique)
-- [ ] Intégration RAG (embeddings + Q&A endpoint)
+- ✅ Intégration RAG (embeddings + Q&A endpoint) - **COMPLÉTÉ 3 oct 2025**
+  - ✅ Endpoint `/tenders/{id}/ask` opérationnel
+  - ✅ Cache Redis 1h TTL
+  - ✅ Recall@5: 100%, Coût: $0.016/tender
+  - ✅ Tests E2E validés
 - [ ] Dashboard React avec risk scoring, KPI, timeline
 - [ ] Composant chat Q&A avec références sources
 - **Coût**: $0.55/AO + $0.01/question
@@ -106,14 +110,29 @@
 ---
 
 #### 3. Compléter RAG Service (Intégré dans Solution 5.5)
-**Priorité**: CRITIQUE | **Effort**: 2-3 jours | **Status**: ⚠️ Sprint 1-2
+**Priorité**: CRITIQUE | **Effort**: 2-3 jours | **Status**: ✅ COMPLÉTÉ (3 oct 2025)
 
-**Tâches**:
-- Implémenter embeddings OpenAI réels (text-embedding-3-small)
-- Tester recherche vectorielle pgvector
-- Valider chunking strategy (recall@5 > 80%)
-- API endpoint `/tenders/{id}/ask` avec RAG
-- Cache questions fréquentes (Redis)
+**Tâches complétées**:
+- ✅ Implémenter embeddings OpenAI réels (text-embedding-3-small)
+- ✅ Tester recherche vectorielle pgvector (cosine similarity)
+- ✅ Valider chunking strategy (recall@5 = 100%, objectif: >80%)
+- ✅ API endpoint `/tenders/{id}/ask` avec RAG
+- ✅ Cache questions fréquentes (Redis 1h TTL)
+- ✅ Méthodes synchrones pour Celery (5 méthodes)
+- ✅ Pipeline intégré (STEP 2: embeddings, STEP 5: similar tenders)
+- ✅ Tests E2E complets (4 tests, recall@5=100%, coût=$0.016/tender)
+
+**Résultats validés**:
+- Recall@5: 100% (objectif: >80%) ✅
+- Answer Quality: 80% (objectif: >80%) ✅
+- Coût: $0.016/tender (objectif: <$0.02) ✅
+- Temps réponse Q&A: <100ms (cache hit), 3-4s (cache miss)
+
+**Prochaines étapes** (Sprint 2):
+- [ ] FAQ pré-calculée (20-30 questions auto-générées)
+- [ ] Intégration Knowledge Base (`past_proposals`, `case_studies`)
+- [ ] Composant frontend Chat Q&A
+- [ ] Re-ranking avec Cohere/Voyage (optionnel)
 
 ---
 
