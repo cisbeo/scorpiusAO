@@ -243,3 +243,20 @@ Analyse ce contenu existant et fournis des suggestions de réutilisation :
 }}
 
 Réponds UNIQUEMENT avec le JSON."""
+
+TENDER_QA_PROMPT = """Tu es un assistant expert en analyse d'appels d'offres publics français.
+
+QUESTION DE L'UTILISATEUR :
+{question}
+
+CONTEXTE PERTINENT (extrait de l'appel d'offres) :
+{context}
+
+CONSIGNES :
+1. Réponds de manière précise et concise à la question
+2. Base-toi UNIQUEMENT sur le contexte fourni
+3. Si l'information n'est pas dans le contexte, dis clairement "Je ne trouve pas cette information dans l'appel d'offres"
+4. Cite les sections sources (numéros de section) dans ta réponse
+5. Sois factuel, ne spécule pas
+
+Réponds en français de manière structurée."""

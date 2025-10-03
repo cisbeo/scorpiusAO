@@ -296,9 +296,66 @@ def process_tender_documents(self, tender_id: str):
             print(f"  ✓ Total content: {len(full_content)} characters")
 
             # STEP 2: Create embeddings
-            print(f"🔍 Step 2/6: Creating embeddings")
-            # TODO: Implement embedding creation
-            # rag_service.ingest_document_sync(...)
+            print(f"🔍 Step 2/6: Creating embeddings for {len(documents)} documents")
+
+            from app.models.document_section import DocumentSection
+
+            total_chunks = 0
+
+            for doc in documents:
+                # Load sections from DB
+                sections_query = db.query(DocumentSection).filter_by(
+                    document_id=doc.id,
+                    is_toc=False  # Skip TOC
+                ).all()
+
+                if not sections_query:
+                    print(f"  ⚠️  No sections found for {doc.filename}, skipping embeddings")
+                    continue
+
+                # Convert ORM objects to dicts
+                sections_data = [
+                    {
+                        "section_number": s.section_number,
+                        "title": s.title,
+                        "content": s.content or "",
+                        "page": s.page,
+                        "is_key_section": s.is_key_section,
+                        "parent_number": s.parent_number,
+                        "level": s.level,
+                        "is_toc": s.is_toc
+                    }
+                    for s in sections_query
+                ]
+
+                # Semantic chunking
+                chunks = rag_service.chunk_sections_semantic(
+                    sections=sections_data,
+                    max_tokens=1000,
+                    min_tokens=100
+                )
+
+                # Ingest with embeddings
+                try:
+                    chunks_created = rag_service.ingest_document_sync(
+                        db=db,
+                        document_id=doc.id,
+                        chunks=chunks,
+                        document_type="tender",
+                        metadata={
+                            "tender_id": str(tender_id),
+                            "filename": doc.filename,
+                            "document_type": doc.document_type
+                        }
+                    )
+                    total_chunks += chunks_created
+                    print(f"  ✓ {doc.filename}: {len(sections_data)} sections → {chunks_created} chunks")
+
+                except Exception as e:
+                    print(f"  ❌ Failed to create embeddings for {doc.filename}: {e}")
+                    # Continue without embeddings (non-blocking)
+
+            print(f"  ✓ Total embeddings created: {total_chunks} chunks")
 
             # STEP 3: AI Analysis
             print(f"🤖 Step 3/6: Running AI analysis")
@@ -354,8 +411,25 @@ def process_tender_documents(self, tender_id: str):
 
             # STEP 5: Find similar tenders
             print(f"🔎 Step 5/6: Finding similar past tenders")
-            # TODO: Implement similarity search
-            # similar = rag_service.find_similar_tenders_sync(db, tender_id)
+
+            try:
+                similar_tenders = rag_service.find_similar_tenders_sync(
+                    db=db,
+                    tender_id=tender_id,
+                    limit=5
+                )
+
+                # Store in analysis
+                analysis.similar_tenders = similar_tenders
+                print(f"  ✓ Found {len(similar_tenders)} similar tenders")
+
+                if similar_tenders:
+                    top = similar_tenders[0]
+                    print(f"  Top match: {top['tender_id']} (similarity: {top['similarity_score']:.2f})")
+
+            except Exception as e:
+                print(f"  ⚠️  Similar tenders search failed: {e}")
+                analysis.similar_tenders = []
 
             # STEP 6: Generate content suggestions
             print(f"💡 Step 6/6: Generating content suggestions")

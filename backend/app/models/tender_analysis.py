@@ -30,6 +30,9 @@ class TenderAnalysis(Base):
     # Structured data extracted
     structured_data = Column(JSON)  # Technical specs, budget, contacts, etc.
 
+    # Similar tenders (RAG-based similarity)
+    similar_tenders = Column(JSON, default=[])  # List of {tender_id, similarity_score}
+
     # Processing metadata
     analysis_status = Column(String(50), default="pending", index=True)  # pending, processing, completed, failed
     processing_time_seconds = Column(Integer)
