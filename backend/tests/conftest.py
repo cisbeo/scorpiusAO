@@ -34,6 +34,19 @@ def db_session(db_engine):
     session.close()
 
 
+@pytest.fixture(scope="module")
+def db_session_module(db_engine):
+    """
+    Module-scoped database session for E2E tests.
+    Shares data across all tests in the module.
+    Commits changes (does not rollback).
+    """
+    Session = sessionmaker(bind=db_engine)
+    session = Session()
+    yield session
+    session.close()
+
+
 # ==================== Tender Fixtures ====================
 
 @pytest.fixture

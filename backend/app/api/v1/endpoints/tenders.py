@@ -164,14 +164,22 @@ async def ask_question_about_tender(
     # 4. RAG search for relevant chunks
     query_emb = await rag_service.create_embedding(request.question)
 
-    # Build SQL with proper parameter binding for asyncpg
+    # Build SQL with proper parameter binding for asyncpg (enriched with document filename)
     from sqlalchemy import bindparam
     sql = text("""
-        SELECT id, document_id, document_type, chunk_text, meta_data,
-               1 - (embedding <=> CAST(:emb AS vector)) as similarity
-        FROM document_embeddings
-        WHERE document_id = ANY(CAST(:doc_ids AS uuid[]))
-        ORDER BY embedding <=> CAST(:emb AS vector)
+        SELECT
+            de.id,
+            de.document_id,
+            de.document_type,
+            de.chunk_text,
+            de.meta_data,
+            1 - (de.embedding <=> CAST(:emb AS vector)) as similarity,
+            td.filename as document_filename,
+            td.document_type as document_type_full
+        FROM document_embeddings de
+        LEFT JOIN tender_documents td ON de.document_id = td.id
+        WHERE de.document_id = ANY(CAST(:doc_ids AS uuid[]))
+        ORDER BY de.embedding <=> CAST(:emb AS vector)
         LIMIT :k
     """).bindparams(
         bindparam("emb", type_=None),
@@ -198,16 +206,23 @@ async def ask_question_about_tender(
     context_parts = []
 
     for row in rows:
+        # Enrich metadata with document filename
+        enriched_metadata = row.meta_data.copy() if row.meta_data else {}
+        enriched_metadata["document_filename"] = row.document_filename or "Unknown"
+        enriched_metadata["document_type_full"] = row.document_type_full or row.document_type
+
         sources.append(SearchResult(
             document_id=str(row.document_id),
             document_type=row.document_type,
             chunk_text=row.chunk_text,
             similarity_score=float(row.similarity),
-            metadata=row.meta_data
+            metadata=enriched_metadata
         ))
 
-        section = row.meta_data.get("section_number", "?")
-        context_parts.append(f"[Section {section}]\n{row.chunk_text}")
+        section = enriched_metadata.get("section_number", "?")
+        page = enriched_metadata.get("page", "?")
+        filename = row.document_filename or "Document inconnu"
+        context_parts.append(f"[{filename} - Section {section}, Page {page}]\n{row.chunk_text}")
 
     context = "\n\n".join(context_parts)
 

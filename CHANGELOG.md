@@ -4,7 +4,37 @@ Toutes les modifications notables du projet sont documentées dans ce fichier.
 
 ---
 
-## [3 octobre 2025] - Knowledge Base RAG Implementation
+## [3 octobre 2025 - PM] - Correction Documentation + Enrichissement Sources API
+
+### 🔧 Modifié
+- **ROADMAP.md : Correction status RAG Service**
+  - Status changé de "✅ COMPLÉTÉ" à "🚧 EN COURS (partiellement complété)"
+  - Ajout section "Tâches en attente" avec détails sur STEP 2 manquant
+  - Ajout section "Limitations actuelles" :
+    - ⚠️ Embeddings créés seulement pour données de test (2 sections fictives)
+    - ⚠️ 377 sections VSGP-AO extraites mais pas embedées
+    - ⚠️ Pages retournées par l'API incorrectes (ex: page 2 au lieu de page 34)
+  - Nouvelle tâche "3bis. Compléter Pipeline Celery - Ingestion RAG Automatique"
+    - Priorité: HAUTE, Effort: 1-2 jours
+    - Objectif: Ajouter STEP 2 (création embeddings) dans `process_tender_document()`
+    - Script CLI pour ingestion manuelle des documents existants
+    - Validation avec vrais documents CCTP.pdf (202 sections → ~140 embeddings)
+
+- **API `/tenders/{id}/ask` : Sources enrichies**
+  - Requête SQL modifiée avec JOIN sur `tender_documents`
+  - Ajout `document_filename` dans métadonnées (ex: "CCTP.pdf", "CCAP.pdf")
+  - Ajout `document_type_full` dans métadonnées (ex: "cahier_charges_technique")
+  - Context passé à Claude enrichi : `[filename - Section X, Page Y]`
+  - Amélioration traçabilité pour le bid manager
+
+### 📝 Documenté
+- Clarification que le RAG fonctionne techniquement mais manque l'intégration automatique
+- Documentation du problème des pages fictives (données de test vs production)
+- Plan détaillé pour compléter le pipeline Celery avec STEP 2
+
+---
+
+## [3 octobre 2025 - AM] - Knowledge Base RAG Implementation
 
 ### ✅ Ajouté
 - **Modèles SQLAlchemy pour Knowledge Base**
